@@ -544,6 +544,10 @@ class LivingLifePage : public GamePage, public ActionListener {
         int getRequiredVersion() {
             return mRequiredVersion;
             }
+			
+		doublePair minitechGetLastScreenViewCenter();
+		char *minitechGetDisplayObjectDescription(int objId);
+		bool minitechSayFieldIsFocused() { return mSayField.isFocused(); }
 
 		void hetuwSetPanelOffsets();
 		bool hetuwSayFieldIsFocused() { return mSayField.isFocused(); }
@@ -679,10 +683,10 @@ class LivingLifePage : public GamePage, public ActionListener {
         SimpleVector<int> mMapExtraMovingObjectsDestObjectIDs;
         SimpleVector<ExtraMapObject> mMapExtraMovingObjects;
 
-        
+        public: // minitech
         int mMapOffsetX;
         int mMapOffsetY;
-
+		protected: // minitech
 
         char mEKeyEnabled;
         char mEKeyDown;
