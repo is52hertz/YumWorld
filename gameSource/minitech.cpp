@@ -28,7 +28,6 @@ bool minitech::minitechEnabled = true;
 float minitech::guiScale = 1.0f;
 
 bool minitech::showUncraftables = false;
-bool minitech::showCommentsAndTagsInObjectDescription = true;
 
 float minitech::viewWidth = 1280.0;
 float minitech::viewHeight = 720.0;
@@ -97,6 +96,8 @@ void minitech::setLivingLifePage(
 	minitechEnabled = SettingsManager::getIntSetting( "useMinitech", 1 );
 	char *minimizeKeyFromSetting = SettingsManager::getStringSetting("minitechMinimizeKey", "v");
 	minimizeKey = minimizeKeyFromSetting[0];
+    
+    showUncraftables = SettingsManager::getIntSetting( "minitechShowUncraftables", 0 );
 }
 
 void minitech::initOnBirth() { 
@@ -475,6 +476,13 @@ vector<bool> minitech::getObjIsCloseVector() {
 	return objIsClose;
 }
 
+bool minitech::isUncraftable(int objId) {
+    if( objId <= 0 ) return false;
+    int d = getObjectDepth( objId );
+    if( d == UNREACHABLE ) return true;
+    return false;
+}
+
 unsigned int minitech::LevenshteinDistance(const std::string& s1, const std::string& s2) {
 	const std::size_t len1 = s1.size(), len2 = s2.size();
 	std::vector<std::vector<unsigned int>> d(len1 + 1, std::vector<unsigned int>(len2 + 1));
@@ -697,16 +705,7 @@ vector<TransRecord*> minitech::getUsesTrans(int objId) {
 		//Skip raw lastUse transitions, the proper ones are auto-generated and not tagged as lastUse
 		if ( trans->lastUseActor || trans->lastUseTarget ) continue;
 		//Skip generic use transitions when they are not food
-		if ( idB == -1 && idD == 0 && getObject(idA) != NULL && getObject(idA)->foodValue == 0 && trans->contTransFlag == 0 ) continue;
-        
-        if ( trans->contTransFlag != 0 ) {
-            //No container-ception, this probably results from cont tag inheritance
-            if( idA == idB ) continue;
-            //Similarly, this results from cont tag inheritance
-            if( getObject(idA) != NULL && getObject(idB) != NULL &&
-                getObject(idA)->permanent && getObject(idB)->permanent ) continue;
-        }
-        
+		if (idB == -1 && idD == 0 && getObject(idA) != NULL && getObject(idA)->foodValue == 0) continue; 
         //Skip transitions that involve uncraftable objects
         if ( !showUncraftables && (isUncraftable(idA) || isUncraftable(idB) || isUncraftable(idC) || isUncraftable(idD)) ) continue;
 		
@@ -746,16 +745,7 @@ vector<TransRecord*> minitech::getProdTrans(int objId) {
 		//Skip raw lastUse transitions, the proper ones are auto-generated and not tagged as lastUse
 		if ( trans->lastUseActor || trans->lastUseTarget ) continue;
 		//Skip generic use transitions when they are not food
-		if ( idB == -1 && idD == 0 && getObject(idA) != NULL && getObject(idA)->foodValue == 0 && trans->contTransFlag == 0 ) continue;
-        
-        if ( trans->contTransFlag != 0 ) {
-            //No container-ception, this probably results from cont tag inheritance
-            if( idA == idB ) continue;
-            //Similarly, this results from cont tag inheritance
-            if( getObject(idA) != NULL && getObject(idB) != NULL &&
-                getObject(idA)->permanent && getObject(idB)->permanent ) continue;
-        }
-        
+		if (idB == -1 && idD == 0 && getObject(idA) != NULL && getObject(idA)->foodValue == 0) continue;
         //Skip transitions that involve uncraftable objects
         if ( !showUncraftables && (isUncraftable(idA) || isUncraftable(idB) || isUncraftable(idC) || isUncraftable(idD)) ) continue;
 		
@@ -1621,79 +1611,32 @@ void minitech::inputHintStrToSearch(string hintStr) {
                     unsortedHits.push_back(hitsSimpleVector[i]);
                 }
 			}
-            
-            if( unsortedHits.size() > 0 ) {
-            
-                std::vector<std::string> hintWords = Tokenize( hintStr, "[\\s]+" );
-                std::vector<std::vector<std::string>> descWords(unsortedHits.size());
-                
-                vector<std::size_t> index(unsortedHits.size());
-                iota(index.begin(), index.end(), 0);
-                sort(index.begin(), index.end(), [&](size_t a, size_t b) { 
-                    // string aDesc(stringToUpperCase(unsortedHits[a]->description));
-                    // string bDesc(stringToUpperCase(unsortedHits[b]->description));
-                    // int aLDist = LevenshteinDistance(hintStr, aDesc); 
-                    // int bLDist = LevenshteinDistance(hintStr, bDesc);
-                    // return aLDist < bLDist;
-                    
-                    string aDesc;
-                    string bDesc;
-                    if( !showCommentsAndTagsInObjectDescription ) {
-                        aDesc = livingLifePage->minitechGetDisplayObjectDescription(unsortedHits[a]->id);
-                        bDesc = livingLifePage->minitechGetDisplayObjectDescription(unsortedHits[b]->id);
-                    } else {
-                        aDesc = stringToUpperCase(unsortedHits[a]->description);
-                        bDesc = stringToUpperCase(unsortedHits[b]->description);
-                    }
-
-                    if( descWords[a].size() == 0 ) descWords[a] = Tokenize( aDesc, "[\\s]+" );
-                    if( descWords[b].size() == 0 ) descWords[b] = Tokenize( bDesc, "[\\s]+" );                
-                    std::vector<std::string> aDescWords = descWords[a];
-                    std::vector<std::string> bDescWords = descWords[b];
-                    
-                    int aScore = 0;
-                    int bScore = 0;
-                    
-                    for ( int i=0; i<(int)hintWords.size(); i++ ) {
-                        string hintWord = hintWords[i];
-                        for ( int j=0; j<(int)aDescWords.size(); j++ ) {
-                            if( hintWord.compare( aDescWords[j] ) == 0 ) aScore++;
-                        }
-                        for ( int k=0; k<(int)bDescWords.size(); k++ ) {
-                            if( hintWord.compare( bDescWords[k] ) == 0 ) bScore++;
-                        }
-                    }
-                    
-                    float aScoreF = (float)aScore / (float)aDescWords.size();
-                    float bScoreF = (float)bScore / (float)bDescWords.size();
-                    
-                    if( aScoreF == bScoreF ) {
-                        return unsortedHits[a]->id < unsortedHits[b]->id;
-                    } else {
-                        return aScoreF > bScoreF;
-                    }
-                });
-                
-                vector<ObjectRecord*> sortedHits(unsortedHits.size());
-                for ( int i=0; i<(int)unsortedHits.size(); i++ ) {
-                    sortedHits[i] = unsortedHits[index[i]];
-                }
-                
-                if (showUncraftables) {
-                    currentHintObjId = sortedHits[0]->id;
-                    return;
-                } else {
-                    for ( int i=0; i<(int)sortedHits.size(); i++ ) {
-                        if ( !isUncraftable(sortedHits[i]->id) ) {
-                            currentHintObjId = sortedHits[i]->id;
-                            return;
-                        }
-                    }
+			
+			vector<std::size_t> index(unsortedHits.size());
+			iota(index.begin(), index.end(), 0);
+			sort(index.begin(), index.end(), [&](size_t a, size_t b) { 
+				// string aDesc(stringToUpperCase(unsortedHits[a]->description));
+				// string bDesc(stringToUpperCase(unsortedHits[b]->description));
+				// int aLDist = LevenshteinDistance(hintStr, aDesc); 
+				// int bLDist = LevenshteinDistance(hintStr, bDesc);
+				// return aLDist < bLDist;
+				return unsortedHits[a]->id < unsortedHits[b]->id;
+			});
+			
+			vector<ObjectRecord*> sortedHits(unsortedHits.size());
+			for ( int i=0; i<unsortedHits.size(); i++ ) {
+				sortedHits[i] = unsortedHits[index[i]];
+			}
+			
+            if (showUncraftables) {
+                currentHintObjId = sortedHits[0]->id;
+            } else {
+                for ( int i=0; i<(int)sortedHits.size(); i++ ) {
+                    if ( !isUncraftable(sortedHits[i]->id) ) 
+                        currentHintObjId = sortedHits[i]->id;
                 }
             }
-        }
-        lastHintSearchNoResults = true;
-        changeHintObjOnTouch = true;
+		}
 	}
 }
 
