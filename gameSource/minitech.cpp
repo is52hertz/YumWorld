@@ -5,6 +5,7 @@
 #include <numeric> //iota
 #include <cmath> //pow and sqrt
 #include <algorithm> //vector sort
+#include <regex> //to tokenize object names for whole word matching, and comment stripping
 
 #include "LivingLifePage.h"
 #include "groundSprites.h"
@@ -25,6 +26,9 @@ using namespace std;
 
 bool minitech::minitechEnabled = true;
 float minitech::guiScale = 1.0f;
+
+bool minitech::showUncraftables = false;
+bool minitech::showCommentsAndTagsInObjectDescription = true;
 
 float minitech::viewWidth = 1280.0;
 float minitech::viewHeight = 720.0;
@@ -485,6 +489,19 @@ unsigned int minitech::LevenshteinDistance(const std::string& s1, const std::str
                       // for C++98 use std::min(std::min(arg1, arg2), arg3)
                       d[i][j] = std::min({ d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1) });
 	return d[len1][len2];
+}
+
+std::vector<std::string> minitech::Tokenize( const string str, const string regpattern ) {
+    using namespace std;
+    regex re( regpattern );
+    std::vector<string> result;
+    sregex_token_iterator it( str.begin(), str.end(), re, -1 );
+    sregex_token_iterator reg_end;
+    for ( ; it != reg_end; ++it ) {
+        if ( !it->str().empty() ) //token could be empty:check
+            result.emplace_back( it->str() );
+    }
+    return result;
 }
 
 
@@ -1302,12 +1319,27 @@ void minitech::updateDrawTwoTech() {
 				
 				ObjectRecord* o = getObject(id);
 				string objFullDesc(stringToUpperCase(o->description));
-				int poundPos = objFullDesc.find("#");
-				if (poundPos != -1) {
-					string objDesc(objFullDesc.substr(poundPos + 1));
-					captionPos.y -= tinyLineHeight*2;
-					drawStr(objDesc, captionPos, "tinyHandwritten", true, true);
-				}
+                int poundPos = objFullDesc.find("#");
+                if (poundPos != -1) {
+                    string displayedComments = "";
+                    string objDesc(objFullDesc.substr(poundPos + 1));
+                    
+                    if( !showCommentsAndTagsInObjectDescription ) {
+                        std::vector<std::string> parts = Tokenize( objDesc, "[#]+" );
+                        for ( int j=0; j<(int)parts.size(); j++ ) {
+                            // if( parts[j].find(" USE") != std::string::npos ) {
+                            if( parts[j].rfind(" USE", 0) == 0 ) {
+                                displayedComments = parts[j];
+                            }
+                        }
+                    } else {
+                        displayedComments = objDesc;
+                    }
+                    if( displayedComments != "" ) {
+                        captionPos.y -= tinyLineHeight*2;
+                        drawStr(displayedComments, captionPos, "tinyHandwritten", true, true);
+                    }
+                }
 			}
 		}
 	}
@@ -1384,9 +1416,24 @@ void minitech::updateDrawTwoTech() {
 		string objFullDesc(stringToUpperCase(o->description));
 		int poundPos = objFullDesc.find("#");
 		if (poundPos != -1) {
-			string objDesc(objFullDesc.substr(poundPos + 1));
-			captionPos.y -= tinyLineHeight*2;
-			drawStr(objDesc, captionPos, "tinyHandwritten", true, true);
+            string displayedComments = "";
+            string objDesc(objFullDesc.substr(poundPos + 1));
+            
+            if( !showCommentsAndTagsInObjectDescription ) {
+                std::vector<std::string> parts = Tokenize( objDesc, "[#]+" );
+                for ( int j=0; j<(int)parts.size(); j++ ) {
+                    // if( parts[j].find(" USE") != std::string::npos ) {
+                    if( parts[j].rfind(" USE", 0) == 0 ) {
+                        displayedComments = parts[j];
+                    }
+                }
+            } else {
+                displayedComments = objDesc;
+            }
+            if( displayedComments != "" ) {
+                captionPos.y -= tinyLineHeight*2;
+                drawStr(displayedComments, captionPos, "tinyHandwritten", true, true);
+            }
 		}
 	}
 	
@@ -1445,37 +1492,85 @@ void minitech::inputHintStrToSearch(string hintStr) {
 		if (numHits > 0) {
 			vector<ObjectRecord*> unsortedHits;
 			for (int i=0; i<numHits; i++) {
-				unsortedHits.push_back(hitsSimpleVector[i]);
+                if( !showCommentsAndTagsInObjectDescription ) {
+                    string strippedName(livingLifePage->minitechGetDisplayObjectDescription(hitsSimpleVector[i]->id)); 
+                    if( strippedName.find(hintStr) != std::string::npos )
+                        unsortedHits.push_back(hitsSimpleVector[i]);
+                } else {
+                    unsortedHits.push_back(hitsSimpleVector[i]);
+                }
 			}
-			
-			vector<std::size_t> index(unsortedHits.size());
-			iota(index.begin(), index.end(), 0);
-			sort(index.begin(), index.end(), [&](size_t a, size_t b) { 
-				// string aDesc(stringToUpperCase(unsortedHits[a]->description));
-				// string bDesc(stringToUpperCase(unsortedHits[b]->description));
-				// int aLDist = LevenshteinDistance(hintStr, aDesc); 
-				// int bLDist = LevenshteinDistance(hintStr, bDesc);
-				// return aLDist < bLDist;
-				return unsortedHits[a]->id < unsortedHits[b]->id;
-			});
-			
-			vector<ObjectRecord*> sortedHits(unsortedHits.size());
-			for ( int i=0; i<unsortedHits.size(); i++ ) {
-				sortedHits[i] = unsortedHits[index[i]];
-			}
-			
-            if (showUncraftables) {
-                currentHintObjId = sortedHits[0]->id;
-                return;
-            } else {
-                for ( int i=0; i<(int)sortedHits.size(); i++ ) {
-                    if ( !isUncraftable(sortedHits[i]->id) ) {
-                        currentHintObjId = sortedHits[i]->id;
-                        return;
+            
+            if( unsortedHits.size() > 0 ) {
+            
+                std::vector<std::string> hintWords = Tokenize( hintStr, "[\\s]+" );
+                std::vector<std::vector<std::string>> descWords(unsortedHits.size());
+                
+                vector<std::size_t> index(unsortedHits.size());
+                iota(index.begin(), index.end(), 0);
+                sort(index.begin(), index.end(), [&](size_t a, size_t b) { 
+                    // string aDesc(stringToUpperCase(unsortedHits[a]->description));
+                    // string bDesc(stringToUpperCase(unsortedHits[b]->description));
+                    // int aLDist = LevenshteinDistance(hintStr, aDesc); 
+                    // int bLDist = LevenshteinDistance(hintStr, bDesc);
+                    // return aLDist < bLDist;
+                    
+                    string aDesc;
+                    string bDesc;
+                    if( !showCommentsAndTagsInObjectDescription ) {
+                        aDesc = livingLifePage->minitechGetDisplayObjectDescription(unsortedHits[a]->id);
+                        bDesc = livingLifePage->minitechGetDisplayObjectDescription(unsortedHits[b]->id);
+                    } else {
+                        aDesc = stringToUpperCase(unsortedHits[a]->description);
+                        bDesc = stringToUpperCase(unsortedHits[b]->description);
+                    }
+
+                    if( descWords[a].size() == 0 ) descWords[a] = Tokenize( aDesc, "[\\s]+" );
+                    if( descWords[b].size() == 0 ) descWords[b] = Tokenize( bDesc, "[\\s]+" );                
+                    std::vector<std::string> aDescWords = descWords[a];
+                    std::vector<std::string> bDescWords = descWords[b];
+                    
+                    int aScore = 0;
+                    int bScore = 0;
+                    
+                    for ( int i=0; i<(int)hintWords.size(); i++ ) {
+                        string hintWord = hintWords[i];
+                        for ( int j=0; j<(int)aDescWords.size(); j++ ) {
+                            if( hintWord.compare( aDescWords[j] ) == 0 ) aScore++;
+                        }
+                        for ( int k=0; k<(int)bDescWords.size(); k++ ) {
+                            if( hintWord.compare( bDescWords[k] ) == 0 ) bScore++;
+                        }
+                    }
+                    
+                    float aScoreF = (float)aScore / (float)aDescWords.size();
+                    float bScoreF = (float)bScore / (float)bDescWords.size();
+                    
+                    if( aScoreF == bScoreF ) {
+                        return unsortedHits[a]->id < unsortedHits[b]->id;
+                    } else {
+                        return aScoreF > bScoreF;
+                    }
+                });
+                
+                vector<ObjectRecord*> sortedHits(unsortedHits.size());
+                for ( int i=0; i<(int)unsortedHits.size(); i++ ) {
+                    sortedHits[i] = unsortedHits[index[i]];
+                }
+                
+                if (showUncraftables) {
+                    currentHintObjId = sortedHits[0]->id;
+                    return;
+                } else {
+                    for ( int i=0; i<(int)sortedHits.size(); i++ ) {
+                        if ( !isUncraftable(sortedHits[i]->id) ) {
+                            currentHintObjId = sortedHits[i]->id;
+                            return;
+                        }
                     }
                 }
             }
-		}
+        }
         lastHintSearchNoResults = true;
         changeHintObjOnTouch = true;
 	}
