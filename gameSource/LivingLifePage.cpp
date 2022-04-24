@@ -17583,7 +17583,7 @@ void LivingLifePage::step() {
                             if( isHintFilterStringInvalid() ) {
                                 mNextHintIndex = 
                                     mHintBookmarks[ mNextHintObjectID ];
-									if (minitech::changeHintObjOnTouch) minitech::currentHintObjId = mNextHintObjectID;
+									if (minitech::changeHintObjOnTouch) minitech::changeCurrentHintObjId(mNextHintObjectID);
                                 }
                             }
                         
@@ -24503,7 +24503,7 @@ void LivingLifePage::pointerDown( float inX, float inY ) {
                 mNextHintObjectID = destID;
                 if( isHintFilterStringInvalid() ) {
                     mNextHintIndex = mHintBookmarks[ destID ];
-					if (minitech::changeHintObjOnTouch) minitech::currentHintObjId = destID;
+					if (minitech::changeHintObjOnTouch) minitech::changeCurrentHintObjId(destID);
                     }
                 }
             else if( tr->newActor > 0 && 
@@ -24512,7 +24512,7 @@ void LivingLifePage::pointerDown( float inX, float inY ) {
                 mNextHintObjectID = tr->newActor;
                 if( isHintFilterStringInvalid() ) {
                     mNextHintIndex = mHintBookmarks[ tr->newTarget ];
-					if (minitech::changeHintObjOnTouch) minitech::currentHintObjId = tr->newActor;
+					if (minitech::changeHintObjOnTouch) minitech::changeCurrentHintObjId(tr->newActor);
                     }
                 }
             else if( tr->newTarget > 0 ) {
@@ -24520,7 +24520,7 @@ void LivingLifePage::pointerDown( float inX, float inY ) {
                 mNextHintObjectID = tr->newTarget;
                 if( isHintFilterStringInvalid() ) {
                     mNextHintIndex = mHintBookmarks[ tr->newTarget ];
-					if (minitech::changeHintObjOnTouch) minitech::currentHintObjId = tr->newTarget;
+					if (minitech::changeHintObjOnTouch) minitech::changeCurrentHintObjId(tr->newTarget);
                     }
                 }
             }
@@ -24532,7 +24532,7 @@ void LivingLifePage::pointerDown( float inX, float inY ) {
                 mNextHintObjectID = destID;
                 if( isHintFilterStringInvalid() ) {
                     mNextHintIndex = mHintBookmarks[ destID ];
-					if (minitech::changeHintObjOnTouch) minitech::currentHintObjId = destID;
+					if (minitech::changeHintObjOnTouch) minitech::changeCurrentHintObjId(destID);
                     }
                 }
             }

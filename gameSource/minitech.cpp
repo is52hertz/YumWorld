@@ -56,6 +56,7 @@ int minitech::lastUseOrMake;
 int minitech::currentHintObjId;
 int minitech::lastHintObjId;
 string minitech::lastHintStr;
+bool minitech::lastHintSearchNoResults = false;
 bool minitech::changeHintObjOnTouch;
 vector<minitech::mouseListener*> minitech::twotechMouseListeners;
 minitech::mouseListener* minitech::prevListener;
@@ -1392,7 +1393,11 @@ void minitech::updateDrawTwoTech() {
 	if (showBar) {
 		string searchStr;
 		if (lastHintStr != "") {
-			searchStr = "SEARCHING: " + lastHintStr;
+            if (lastHintSearchNoResults) {
+                searchStr = "SEARCHING: " + lastHintStr + " (NO RESULTS)";
+            } else {
+                searchStr = "SEARCHING: " + lastHintStr;
+            }
 		} else if (ourLiveObject->holdingID != 0 && ourLiveObject->holdingID == currentHintObjId) {
 			string objName(livingLifePage->minitechGetDisplayObjectDescription(currentHintObjId));
 			searchStr = "HOLDING: " + objName;
@@ -1424,6 +1429,7 @@ void minitech::updateDrawTwoTech() {
 
 void minitech::inputHintStrToSearch(string hintStr) {
 	lastHintStr = hintStr;
+    lastHintSearchNoResults = false;
 	if (hintStr == "") {
 		changeHintObjOnTouch = true;
 	} else {
@@ -1458,9 +1464,26 @@ void minitech::inputHintStrToSearch(string hintStr) {
 				sortedHits[i] = unsortedHits[index[i]];
 			}
 			
-			currentHintObjId = sortedHits[0]->id;
+            if (showUncraftables) {
+                currentHintObjId = sortedHits[0]->id;
+                return;
+            } else {
+                for ( int i=0; i<(int)sortedHits.size(); i++ ) {
+                    if ( !isUncraftable(sortedHits[i]->id) ) {
+                        currentHintObjId = sortedHits[i]->id;
+                        return;
+                    }
+                }
+            }
 		}
+        lastHintSearchNoResults = true;
+        changeHintObjOnTouch = true;
 	}
+}
+
+void minitech::changeCurrentHintObjId(int objID) {
+    lastHintStr = "";
+    currentHintObjId = objID;
 }
 
 
