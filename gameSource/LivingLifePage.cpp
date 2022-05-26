@@ -1326,13 +1326,16 @@ static char *getDisplayObjectDescription( int inID ) {
     stripDescriptionComment( upper );
     return upper;
     }
-	
-char *LivingLifePage::minitechGetDisplayObjectDescription( int objId ) { 
+
+string LivingLifePage::minitechGetDisplayObjectDescription( int objId ) { 
     ObjectRecord *o = getObject( objId );
     if( o == NULL ) {
 		return "";
     }
-	return getDisplayObjectDescription(objId);
+	char *descriptionChars = getDisplayObjectDescription(objId);
+	string description(descriptionChars);
+	delete [] descriptionChars;
+	return description;
 }
 
 
@@ -14702,7 +14705,31 @@ void LivingLifePage::step() {
             char *tempEmail;
             
             if( strlen( userEmail ) > 0 ) {
-                tempEmail = stringDuplicate( userEmail );
+                std::string seededEmail = std::string( userEmail );
+
+				// If user doesn't have a seed in their email field
+				if( seededEmail.find('|') == std::string::npos ) {
+					char *seedListFromFile = SettingsManager::getSettingContents( "spawnSeed", "" );
+					std::string seedList(seedListFromFile);
+					delete [] seedListFromFile;
+					std::string seed = "";
+					if( seedList == "" ) {
+						seed = "";
+					} else if( seedList.find('\n') == std::string::npos ) {
+						seed = seedList;
+					} else if( seedList.find('\n') != std::string::npos ) {
+						seed = seedList.substr( 0, seedList.find('\n') );
+					}
+
+					// And if the user has a seed set in settings
+					if( seed != "" ) {
+						// Add seed delim and then seed
+						seededEmail += '|';
+						seededEmail += seed;
+						}
+					}
+
+                tempEmail = stringDuplicate( seededEmail.c_str() );
                 }
             else {
                 // a blank email
@@ -19137,7 +19164,6 @@ void LivingLifePage::step() {
                 if( ourID != lastPlayerID ) {
                     homePosStack.deleteAll();
 					HetuwMod::initOnBirth();
-					minitech::initOnBirth();
                     // different ID than last time, delete old home markers
                     oldHomePosStack.deleteAll();
                     }

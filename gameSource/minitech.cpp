@@ -62,8 +62,8 @@ string minitech::lastHintStr;
 bool minitech::lastHintSearchNoResults = false;
 bool minitech::changeHintObjOnTouch;
 vector<minitech::mouseListener*> minitech::twotechMouseListeners;
-minitech::mouseListener* minitech::prevListener;
-minitech::mouseListener* minitech::nextListener;
+minitech::mouseListener* minitech::prevListener = NULL;
+minitech::mouseListener* minitech::nextListener = NULL;
 
 const char *biomeNames[] = {"GRASSLANDS",
 							"SWAMP",
@@ -96,6 +96,7 @@ void minitech::setLivingLifePage(
 	minitechEnabled = SettingsManager::getIntSetting( "useMinitech", 1 );
 	char *minimizeKeyFromSetting = SettingsManager::getStringSetting("minitechMinimizeKey", "v");
 	minimizeKey = minimizeKeyFromSetting[0];
+	delete [] minimizeKeyFromSetting;
     
     showUncraftables = SettingsManager::getIntSetting( "minitechShowUncraftables", 0 );
 }
@@ -534,7 +535,6 @@ void minitech::drawPoint(doublePair posCen, string color) {
 }
 
 void minitech::drawObj(doublePair posCen, int objId, string strDescFirstLine, string strDescSecondLine) {
-	ObjectRecord* obj = getObject(objId);
 	if (objId <= 0) {
 		string firstPart;
 		string secondPart;
@@ -553,6 +553,7 @@ void minitech::drawObj(doublePair posCen, int objId, string strDescFirstLine, st
 		drawStr(secondPart, firstLine, "tinyHandwritten", false);
 		return;
 	}
+    ObjectRecord* obj = getObject(objId);
 	if (obj == NULL) return;
 	int maxD = getMaxDiameter( obj );
 	double zoom = 1;
@@ -1434,7 +1435,7 @@ void minitech::updateDrawTwoTech() {
 					continue;
 				}
 				
-				string objName(livingLifePage->minitechGetDisplayObjectDescription(id));
+				string objName = livingLifePage->minitechGetDisplayObjectDescription(id);
 				drawStr(objName, captionPos, "tinyHandwritten", true, true);
 				
 				ObjectRecord* o = getObject(id);
@@ -1529,7 +1530,7 @@ void minitech::updateDrawTwoTech() {
 		sub(iconBR, screenPos));
 	if (headerIconListener->mouseHover && currentHintObjId > 0) {
 		doublePair captionPos = {iconCen.x, iconCen.y + iconCaptionYOffset};
-		string objName(livingLifePage->minitechGetDisplayObjectDescription(currentHintObjId));
+		string objName = livingLifePage->minitechGetDisplayObjectDescription(currentHintObjId);
 		drawStr(objName, captionPos, "tinyHandwritten", true, true);
 		
 		ObjectRecord* o = getObject(currentHintObjId);
@@ -1566,7 +1567,7 @@ void minitech::updateDrawTwoTech() {
                 searchStr = "SEARCHING: " + lastHintStr + " (SAY '/' TO CLEAR)";
             }
 		} else if (ourLiveObject->holdingID != 0 && ourLiveObject->holdingID == currentHintObjId) {
-			string objName(livingLifePage->minitechGetDisplayObjectDescription(currentHintObjId));
+			string objName = livingLifePage->minitechGetDisplayObjectDescription(currentHintObjId);
 			searchStr = "HOLDING: " + objName;
 		}
 		
@@ -1613,7 +1614,7 @@ void minitech::inputHintStrToSearch(string hintStr) {
 			vector<ObjectRecord*> unsortedHits;
 			for (int i=0; i<numHits; i++) {
                 if( !showCommentsAndTagsInObjectDescription ) {
-                    string strippedName(livingLifePage->minitechGetDisplayObjectDescription(hitsSimpleVector[i]->id)); 
+                    string strippedName = livingLifePage->minitechGetDisplayObjectDescription(hitsSimpleVector[i]->id);
                     if( strippedName.find(hintStr) != std::string::npos )
                         unsortedHits.push_back(hitsSimpleVector[i]);
                 } else {
@@ -1706,20 +1707,21 @@ void minitech::livingLifeDraw(float mX, float mY) {
 		listener->mouseHover = false;
 		
 		if ( !listener->mouseHover && !listener->mouseClick ) {
+			if( listener != NULL ) delete listener;
 			twotechMouseListeners.erase( twotechMouseListeners.begin() + i );
 		}
 	}
 	
-	if ( prevListener != NULL ) {
-		if ( !prevListener->mouseHover && !prevListener->mouseClick ) {
-			prevListener = NULL;
-		}
-	}
-	if ( nextListener != NULL ) {
-		if ( !nextListener->mouseHover && !nextListener->mouseClick ) {
-			nextListener = NULL;
-		}
-	}
+	// if ( prevListener != NULL ) {
+		// if ( !prevListener->mouseHover && !prevListener->mouseClick ) {
+			// prevListener = NULL;
+		// }
+	// }
+	// if ( nextListener != NULL ) {
+		// if ( !nextListener->mouseHover && !nextListener->mouseClick ) {
+			// nextListener = NULL;
+		// }
+	// }
 	
 	// currentHintObjId = getDummyParent(currentHintObjId);
 	
