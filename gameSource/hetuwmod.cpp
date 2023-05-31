@@ -4828,7 +4828,7 @@ void HetuwMod::setHelpColorSpecial() {
 
 void HetuwMod::drawHelp() {
 	float guiScale = (guiScaleRaw+0.1) * zoomScale;
-	char str[128];
+	char str[256];
 	setDrawColor( 0, 0, 0, 0.8 );
 	drawRect( lastScreenViewCenter, viewWidth/2, viewHeight/2 );
 
@@ -4841,7 +4841,7 @@ void HetuwMod::drawHelp() {
 	drawPos.y += viewHeight/2 - 30*guiScale;
 	char serverIPupperCase[128];
 	strToUpper(serverIP, serverIPupperCase, 128);
-	sprintf(str, "%s:%d", serverIPupperCase, serverPort);
+	snprintf(str, sizeof(str), "%s:%d", serverIPupperCase, serverPort);
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 
 	// emotion words

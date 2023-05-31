@@ -1316,7 +1316,7 @@ static char *getDisplayObjectDescription( int inID ) {
     return upper;
     }
 	
-char *LivingLifePage::minitechGetDisplayObjectDescription( int objId ) { 
+const char *LivingLifePage::minitechGetDisplayObjectDescription( int objId ) { 
     ObjectRecord *o = getObject( objId );
     if( o == NULL ) {
 		return "";

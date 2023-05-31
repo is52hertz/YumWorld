@@ -178,7 +178,7 @@ bool minitech::isCategory(int objId) {
 
 minitech::mouseListener* minitech::getMouseListenerByArea( 
 	vector<mouseListener*>* listeners, doublePair posTL, doublePair posBR ) {
-	for (int i=0; i<listeners->size(); i++) {
+	for (size_t i=0; i<listeners->size(); i++) {
 		if (
 			posEqual( (*listeners)[i]->posTL, posTL) &&
 			posEqual( (*listeners)[i]->posBR, posBR)
@@ -285,7 +285,7 @@ GridPos minitech::getClosestTile(GridPos src, int objId) {
 	
 	GridPos foundPos = {9999, 9999};
 	if (tileFound) {
-		foundPos = {foundBestX, foundBestY};
+		foundPos = {int(foundBestX), int(foundBestY)};
 	}
 	return foundPos;
 }
@@ -422,11 +422,9 @@ vector<bool> minitech::getObjIsCloseVector() {
 	
 	for( int y=0; y<pathFindingD; y++ ) {
 		int mapY = ( y - pathOffsetY ) + mMapD / 2 - mMapOffsetY;
-		int mapY_abs = mapY + mMapOffsetY - mMapD / 2;
 		
 		for( int x=0; x<pathFindingD; x++ ) {
 			int mapX = ( x - pathOffsetX ) + mMapD / 2 - mMapOffsetX;
-			int mapX_abs = mapX + mMapOffsetX - mMapD / 2;
 			
 			if( mapY >= 0 && mapY < mMapD &&
 				mapX >= 0 && mapX < mMapD ) { 
@@ -537,7 +535,7 @@ void minitech::drawStr(
 	doublePair screenCenter = livingLifePage->minitechGetLastScreenViewCenter();
 	
 	char sBuf[64];
-	sprintf( sBuf, str.c_str() );
+	snprintf( sBuf, sizeof(sBuf), "%s", str.c_str() );
 	float textWidth = 0;
 	if (font == "handwritten") {
 		textWidth = handwritingFont->measureString( sBuf );
@@ -760,16 +758,13 @@ vector<TransRecord*> minitech::sortUsesTrans(vector<TransRecord*> unsortedTrans)
 	vector<bool> boolCloseVect = getObjIsCloseVector();
 	vector<float> rankScores(unsortedTrans.size(), 0);
 	
-	for ( int i=0; i<unsortedTrans.size(); i++ ) {
+	for ( size_t i=0; i<unsortedTrans.size(); i++ ) {
 		TransRecord *trans = unsortedTrans[i];
 		
 		int idA = trans->actor;
 		int idB = trans->target;
-		int idC = trans->newActor;
-		int idD = trans->newTarget;
-		int holdingID = getDummyParent(ourLiveObject->holdingID);
 		
-		GridPos currentPos = {currentX, currentY};
+		GridPos currentPos = {int(currentX), int(currentY)};
 		
 		float punishmentScore = 9999.0;
 		
@@ -812,7 +807,7 @@ vector<TransRecord*> minitech::sortUsesTrans(vector<TransRecord*> unsortedTrans)
 	sort(index.begin(), index.end(), [&](size_t a, size_t b) { return rankScores[a] < rankScores[b]; });
 	
 	vector<TransRecord*> temp(unsortedTrans.size());
-	for ( int i=0; i<unsortedTrans.size(); i++ ) {
+	for ( size_t i=0; i<unsortedTrans.size(); i++ ) {
 		temp[i] = unsortedTrans[index[i]];
 	}
 	return temp;
@@ -823,16 +818,13 @@ vector<TransRecord*> minitech::sortProdTrans(vector<TransRecord*> unsortedTrans)
 	vector<bool> boolCloseVect = getObjIsCloseVector();
 	vector<float> rankScores(unsortedTrans.size(), 0);
 	
-	for ( int i=0; i<unsortedTrans.size(); i++ ) {
+	for ( size_t i=0; i<unsortedTrans.size(); i++ ) {
 		TransRecord *trans = unsortedTrans[i];
 		
 		int idA = trans->actor;
 		int idB = trans->target;
-		int idC = trans->newActor;
-		int idD = trans->newTarget;
-		int holdingID = getDummyParent(ourLiveObject->holdingID);
 		
-		GridPos currentPos = {currentX, currentY};
+		GridPos currentPos = {int(currentX), int(currentY)};
 		
 		float punishmentScore = 32.0;
 		
@@ -885,7 +877,7 @@ vector<TransRecord*> minitech::sortProdTrans(vector<TransRecord*> unsortedTrans)
 	sort(index.begin(), index.end(), [&](size_t a, size_t b) { return rankScores[a] < rankScores[b]; });
 	
 	vector<TransRecord*> temp(unsortedTrans.size());
-	for ( int i=0; i<unsortedTrans.size(); i++ ) {
+	for ( size_t i=0; i<unsortedTrans.size(); i++ ) {
 		temp[i] = unsortedTrans[index[i]];
 	}
 	return temp;
@@ -1231,7 +1223,7 @@ void minitech::updateDrawTwoTech() {
 		}
 		
 		if (highlightObjId > 0) {
-			GridPos currentPos = {currentX, currentY};
+			GridPos currentPos = {int(currentX), int(currentY)};
 			GridPos closestHintObjPos = getClosestTile(currentPos, highlightObjId);
 			if ( !(closestHintObjPos.x == 9999 && closestHintObjPos.y == 9999) ) {
 				drawTileRect(closestHintObjPos.x, closestHintObjPos.y, "blue", true);
@@ -1282,7 +1274,7 @@ void minitech::updateDrawTwoTech() {
 			drawStr(pageInd, pos, "tinyMain", false);
 		}
 		
-		for (int i=0; i<iconListenerIds.size(); i++) {
+		for (size_t i=0; i<iconListenerIds.size(); i++) {
 			mouseListener* listener = iconListenerIds[i].first;
 			int id = iconListenerIds[i].second;
 			doublePair iconLT = add(listener->posTL, screenPos);
@@ -1455,7 +1447,7 @@ void minitech::inputHintStrToSearch(string hintStr) {
 			});
 			
 			vector<ObjectRecord*> sortedHits(unsortedHits.size());
-			for ( int i=0; i<unsortedHits.size(); i++ ) {
+			for ( size_t i=0; i<unsortedHits.size(); i++ ) {
 				sortedHits[i] = unsortedHits[index[i]];
 			}
 			
@@ -1609,7 +1601,7 @@ bool minitech::livingLifePageMouseDown( float mX, float mY ) {
 	doublePair mousePosScreenAdj = sub(mousePos, screenPos);
 	
 	bool clickCaught = false;
-	for ( int i=0; i<twotechMouseListeners.size(); i++ ) {
+	for ( size_t i=0; i<twotechMouseListeners.size(); i++ ) {
 		mouseListener* listener = twotechMouseListeners[i];
 		if ( posWithinArea(mousePosScreenAdj, listener->posTL, listener->posBR) ) {
 			listener->mouseClick = true;
