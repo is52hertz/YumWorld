@@ -149,6 +149,8 @@ doublePair LivingLifePage::minitechGetLastScreenViewCenter() { return lastScreen
 
 static char shouldMoveCamera = true;
 
+bool ShowUseOnObjectHoverSettingToggle = false;
+static bool isShowUseOnObjectHoverKeybindEnabled = false;
 
 extern double visibleViewWidth;
 extern double viewHeight;
@@ -169,6 +171,8 @@ static char vogMode = false;
 static char vogModeActuallyOn = false;
 
 static doublePair vogPos = { 0, 0 };
+
+
 
 static char vogPickerOn = false;
 
@@ -1316,29 +1320,87 @@ int LivingLifePage::hetuwGetTextLengthLimit() {
 }
 
 
-
-static char *getDisplayObjectDescription( int inID ) {
+static char *getFullUpperCasedObjectDescription( int inID ) {
     ObjectRecord *o = getObject( inID );
     if( o == NULL ) {
         return NULL;
         }
-    char *upper = stringToUpperCase( o->description );
-    stripDescriptionComment( upper );
-    return upper;
+    return stringToUpperCase( o->description );
+}
+
+
+static char *getDisplayObjectDescription( int inID ) {
+    char *desc = getFullUpperCasedObjectDescription(inID);
+    if(desc == NULL) {
+        return NULL;
+        }
+    stripDescriptionComment( desc );
+    return desc;
     }
 
-string LivingLifePage::minitechGetDisplayObjectDescription( int objId ) { 
+
+std::string LivingLifePage::minitechGetDisplayObjectDescription( int objId ) { 
     ObjectRecord *o = getObject( objId );
     if( o == NULL ) {
 		return "";
-    }
+        }
 	char *descriptionChars = getDisplayObjectDescription(objId);
 	string description(descriptionChars);
 	delete [] descriptionChars;
 	return description;
 }
 
+static std::string minitechGetFullObjectDescription( int objID ) {
+    char *desc = getFullUpperCasedObjectDescription(objID);
+    if (desc == NULL) {
+        return "";
+        }
+    std::string s = desc;
+    return s;
+    }
 
+std::string LivingLifePage::minitechGetObjectDescriptionComment(int objID ) {
+    std::string objFullDesc = minitechGetFullObjectDescription(objID);
+    int poundPos = objFullDesc.find("#");
+    if (poundPos != -1) {
+        return objFullDesc.substr(poundPos + 1);
+        }
+    return "";
+    }
+
+std::string LivingLifePage::minitechGetObjectDescriptionTagData( std::string &objDesc) {
+    std::string tagData = "";
+    std::vector<std::string> parts = minitech::Tokenize( objDesc, "[#]+" );
+    for ( int j=0; j<(int)parts.size(); j++ ) {
+        if( parts[j].rfind(" USE", 0) == 0 ) {
+            tagData = parts[j];
+            }
+        }
+
+        return tagData;
+    }
+
+static bool isAllDigits(std::string &str) {
+    return std::all_of(str.begin(), str.end(), ::isdigit);
+    }
+
+// Checks for a potential container change caused by containment transitions
+// We could check all the changed contained objects and all the IN and OUT transitions
+// But it suffices for now to just check for
+// a change in the container and that both containers having the useOnContained tag
+static bool potentialContainerChangebyContTrans( int oldId, int newId ) { 
+    if( oldId == newId ) return false;
+    int maxObjectID = getMaxObjectID();
+    if( oldId <= 0 || newId <= 0 || oldId > maxObjectID || newId > maxObjectID ) return false;
+    ObjectRecord *oldObj = getObject( oldId );
+    ObjectRecord *newObj = getObject( newId );
+    if( oldObj == NULL || newObj == NULL ) return false;
+    if( oldObj->description == NULL || newObj->description == NULL ) return false;
+    if( strstr( oldObj->description, "+useOnContained" ) != NULL &&
+        strstr( newObj->description, "+useOnContained" ) != NULL )
+        return true;
+    return false;
+}
 
 typedef enum messageType {
     SHUTDOWN,
@@ -11157,9 +11219,37 @@ void LivingLifePage::draw( doublePair inViewCenter,
                     }
                 }
             
-            
-            setDrawColor( 0, 0, 0, 1 );
-            pencilFont->drawString( stringUpper, tipPos, alignCenter );
+            // This was the main description drawn on guiPanel
+            // setDrawColor( 0, 0, 0, 1 );
+            // pencilFont->drawString( stringUpper, pos, alignCenter );
+			
+			// Moved to be cursor-tips
+            if( ! mXKeyDown )
+            if( mCurMouseOverID != 0 ) {
+                FloatColor bgColor = { 0.05, 0.05, 0.05, 1.0 };
+                FloatColor txtColor = { 1, 1, 1, 1 };
+                drawChalkBackgroundString( 
+                    {lastMouseX + 16 * gui_fov_scale_hud, lastMouseY - 16 * gui_fov_scale_hud}, 
+                    stringUpper, 1.0, 100000.0, NULL, -1, &bgColor, &txtColor, true );
+
+                const bool isShowUseOnObjectHoverIsActive = 
+                    ShowUseOnObjectHoverSettingToggle  && isShowUseOnObjectHoverKeybindEnabled;
+
+                if(isShowUseOnObjectHoverIsActive && mCurMouseOverID > 0) {      
+                    std::string objComment = minitechGetObjectDescriptionComment(mCurMouseOverID);
+                    std::string displayedComment = objComment;
+                    std::string tagData = minitechGetObjectDescriptionTagData(objComment);
+
+                    std::string tagName = " USE";
+                    if(!tagData.empty()) { displayedComment = tagData.substr(tagName.size() + 1); }
+                    if(!displayedComment.empty() && isAllDigits(displayedComment)) {
+                        char *display = autoSprintf("USE: %s", displayedComment.c_str());
+                        drawChalkBackgroundString( 
+                        {lastMouseX + 22 * gui_fov_scale_hud, lastMouseY - 34 * gui_fov_scale_hud}, 
+                        display, 1.0, 100000.0, NULL, -1, &bgColor, &txtColor, true );                        
+                    }                
+                }
+            }
             
             delete [] stringUpper;
             }
@@ -25937,6 +26027,62 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
             }
         return;
         }
+
+	bool commandKey = isCommandKeyDown();
+	bool shiftKey = isShiftKeyDown();
+
+
+    if (!vogMode && !vogPickerOn) {
+        int keyCode_u = 85;
+        if (shiftKey && inASCII == keyCode_u) {
+            bool isSettingEnabled = 
+                SettingsManager::getIntSetting("advanced/showUseOnObjectHoverKeybind", 0);
+            ShowUseOnObjectHoverSettingToggle = isSettingEnabled;
+
+            if (isSettingEnabled) {
+                isShowUseOnObjectHoverKeybindEnabled = !isShowUseOnObjectHoverKeybindEnabled;
+            } else {
+                isShowUseOnObjectHoverKeybindEnabled = false;
+            }
+        }
+    }
+
+    if( vogMode && vogPickerOn ) {
+        //Picker keybinds
+        if( !commandKey && inASCII == 9 ) { // TAB
+            if( TextField::isAnyFocused() ) {
+                TextField::unfocusAll();
+            } else {
+                mObjectPicker.clearSearchField();
+                mObjectPicker.focusSearchField();
+            }
+            return;
+        } else if( commandKey && inASCII == 9 ) { // ctrl + TAB
+            mObjectPicker.setSearchField( "." );
+            TextField::unfocusAll();
+            return;
+        } else if( !TextField::isAnyFocused() && commandKey ) {
+            if( inASCII + 64 == toupper(upKey) ) {
+                mObjectPicker.selectUp();
+            } else if( inASCII + 64 == toupper(downKey) ) {
+                mObjectPicker.selectDown();
+                return;
+            }  else if( inASCII + 64 == toupper(rightKey) ) {
+                mObjectPicker.nextPage();
+            }  else if( inASCII + 64 == toupper(leftKey) ) {
+                mObjectPicker.prevPage();
+            }
+        } else if( TextField::isAnyFocused() && !mSayField.isFocused() && inASCII == 13 ) {
+            TextField::unfocusAll();
+            return;
+        }
+    } else if( vogMode && !vogPickerOn ) {
+		if( !commandKey && inASCII == 9 ) { // TAB
+			addComponent( &mObjectPicker );
+			mObjectPicker.addActionListener( this );
+			vogPickerOn = true;
+		}
+    }
 
 	if (inASCII == 'x' || inASCII == 'X') { // hetuw mod - copied and pasted from below in order to allow the cancel of twinning waiting screen
 		if( userTwinCode != NULL &&

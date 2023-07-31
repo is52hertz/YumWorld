@@ -25,7 +25,22 @@ extern int targetFramesPerSecond;
 
 
 SettingsPage::SettingsPage()
-        : mBackButton( mainFont, -542, -280, translate( "backButton" ) ),
+        : mBackground( "background.tga", 0.75f ),
+          
+          // Left Pane
+          mRestartButton( mainFont, 360, -272, translate( "restartButton" ) ),
+          
+          mGameplayButton( mainFont, -452.5, 288, "GAMEPLAY" ),
+          mControlButton( mainFont, -452.5, 192, "CONTROL" ),
+          mScreenButton( mainFont, -452.5, 96, "SCREEN" ),
+          mSoundButton( mainFont, -452.5, 0, "SOUND" ),
+#ifdef USE_DISCORD
+          mDiscordButton( mainFont, -452.5, -96, "DISCORD" ),
+#endif // USE_DISCORD
+          mAdvancedButton( mainFont, -452.5, -192, "ADVANCED" ),
+
+          mBackButton( mainFont, -452.5, -288, translate( "backButton" ) ),
+          
           mEditAccountButton( mainFont, -463, 129, translate( "editAccount" ) ),
           mRestartButton( mainFont, 128, 128, translate( "restartButton" ) ),
           mRedetectButton( mainFont, 173, 249, translate( "redetectButton" ) ),
