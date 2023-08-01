@@ -930,6 +930,22 @@ vector<TransRecord*> minitech::sortProdTrans(vector<TransRecord*> unsortedTrans)
 	return temp;
 }
 
+static void drawUseCaption(
+	int objId, LivingLifePage &livingLifePage,
+	doublePair &captionPos, int tinyLineHeight) {
+
+	string objComment = livingLifePage.minitechGetObjectDescriptionComment(objId);
+	string displayComment = objComment;
+	string tagData = livingLifePage.minitechGetObjectDescriptionTagData(objComment, " USE");
+	if( !tagData.empty() && !minitech::showCommentsAndTagsInObjectDescription ) { 
+		displayComment = tagData; 
+	}
+	if(!displayComment.empty()) {
+		captionPos.y -= tinyLineHeight*2;
+		minitech::drawStr(displayComment, captionPos, "tinyHandwritten", true, true);
+	}
+}
+
 void minitech::updateDrawTwoTech() {
 	
 	int defaultNumOfLines = 5;
@@ -1437,18 +1453,7 @@ void minitech::updateDrawTwoTech() {
 				
 				string objName = livingLifePage->minitechGetDisplayObjectDescription(id);
 				drawStr(objName, captionPos, "tinyHandwritten", true, true);
-				
-				string objComment = livingLifePage->minitechGetObjectDescriptionComment(currentHintObjId);
-				if (!objComment.empty()) {
-					string displayedComment = objComment;
-					if( !showCommentsAndTagsInObjectDescription ) {
-						string tagData = livingLifePage->minitechGetObjectDescriptionTagData(objComment);
-						if (!tagData.empty()) { displayedComment = tagData; }
-						}
-
-					captionPos.y -= tinyLineHeight*2;
-					drawStr(displayedComment, captionPos, "tinyHandwritten", true, true);
-					}
+				drawUseCaption(id, *livingLifePage, captionPos, tinyLineHeight);
 				}
 			}
 	}
@@ -1521,17 +1526,7 @@ void minitech::updateDrawTwoTech() {
 		string objName = livingLifePage->minitechGetDisplayObjectDescription(currentHintObjId);
 		drawStr(objName, captionPos, "tinyHandwritten", true, true);
 		
-		string objComment = livingLifePage->minitechGetObjectDescriptionComment(currentHintObjId);
-		if (!objComment.empty()) {
-			string displayedComment = objComment;
-			if( !showCommentsAndTagsInObjectDescription ) {
-				string tagData = livingLifePage->minitechGetObjectDescriptionTagData(objComment);
-				if (!tagData.empty()) { displayedComment = tagData; }
-				}
-
-			captionPos.y -= tinyLineHeight*2;
-			drawStr(displayedComment, captionPos, "tinyHandwritten", true, true);
-			}
+		drawUseCaption(currentHintObjId, *livingLifePage, captionPos, tinyLineHeight);
 	}
 	
 	if (showBar) {
