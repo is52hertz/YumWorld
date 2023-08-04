@@ -72,10 +72,13 @@ public:
 	static float getTransProbability(TransRecord* trans);
     static bool isUncraftable(int objId);
 	static unsigned int LevenshteinDistance(const std::string& s1, const std::string& s2);
-    static std::vector<std::string> Tokenize( const std::string str );
+    static std::vector<std::string> Tokenize( const std::string str, const std::string regpattern );
+
 	
 	static int objIdFromXY( int x, int y );
 	static std::vector<bool> getObjIsCloseVector();
+	static std::string getObjDescriptionComment(int objId);
+	static std::string getObjDescriptionTagData( const std::string &objComment, const char *tagName );
 	static std::vector<TransRecord*> getUsesTrans(int objId);
 	static std::vector<TransRecord*> getProdTrans(int objId);
 	
