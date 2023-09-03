@@ -14,8 +14,8 @@
 #include "minorGems/graphics/filters/FastBlurFilter.h"
 #include "minorGems/graphics/filters/BoxBlurFilter.h"
 
+#include "hetuwmod.h"
 #include "minorGems/graphics/RGBAImage.h"
-
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
@@ -38,6 +38,15 @@ extern double visibleViewWidth;
 
 Image *photoBorder;
 
+Image *hetuwPhoto = NULL;
+void hetuwTakePhoto() {
+	if (hetuwPhoto) delete hetuwPhoto;
+	int *rec = HetuwMod::getPhotoRecForImage();
+	int startX = rec[0]; int startY = rec[1];
+	hetuwPhoto = getScreenRegionRaw( startX, startY, hetuwPhotoSize, hetuwPhotoSize );
+	HetuwMod::saveImage(hetuwPhoto);
+	delete[] rec;
+}
 
 void initPhotos() {
     photoBorder = readTGAFile( "photoBorder.tga" );
@@ -345,29 +354,32 @@ void takePhoto( doublePair inCameraLocation, int inCameraFacing,
         rectStartY = screenHeight - screenScale * 400 - 1;
         }
     
-    Image *im = getScreenRegionRaw( rectStartX, rectStartY, 
-                                    screenScale * 400, screenScale * 400 );
+	Image *im;
+	if (hetuwPhoto) {
+		im = hetuwPhoto;
+		hetuwPhoto = NULL;
+    } else {
+    	im = getScreenRegionRaw( rectStartX, rectStartY, screenScale * 400, screenScale * 400 );
+        if( screenScale != 1.0 ) {
+            // resize the image to 400x400
 
-    if( screenScale != 1.0 ) {
-        // resize the image to 400x400
-
-        unsigned char *bytes = RGBAImage::getRGBABytes( im );
+            unsigned char *bytes = RGBAImage::getRGBABytes( im );
         
-        unsigned char *outBytes = new unsigned char[ 400 * 400 * 4 ];
+            unsigned char *outBytes = new unsigned char[ 400 * 400 * 4 ];
 
-        int result = stbir_resize_uint8( bytes, 
-                                         im->getWidth(), im->getHeight(),
-                                         0, outBytes, 400, 400, 0, 4 );
-        if( result == 1 ) {
-            delete im;
+            int result = stbir_resize_uint8( bytes, 
+                                             im->getWidth(), im->getHeight(),
+                                             0, outBytes, 400, 400, 0, 4 );
+            if( result == 1 ) {
+                delete im;
             
-            im = RGBAImage::getImageFromBytes( outBytes, 400, 400, 4 );
+                im = RGBAImage::getImageFromBytes( outBytes, 400, 400, 4 );
             }
 
-        delete [] bytes;
-        delete [] outBytes;
+            delete [] bytes;
+            delete [] outBytes;
         }
-    
+    }
     
     double *r = im->getChannel( 0 );
     double *g = im->getChannel( 1 );

@@ -14,6 +14,10 @@ ROOT_PATH = ../..
 
 
 LAYER_SOURCE = \
+hetuwmod.cpp \
+hetuwFont.cpp \
+hetuwTCPConnection.cpp \
+phex.cpp \
 game.cpp \
 spriteBank.cpp \
 objectBank.cpp \

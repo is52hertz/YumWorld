@@ -55,6 +55,10 @@
 #define OHOL_NON_EDITOR 1
 #include "ObjectPickable.h"
 
+#include "hetuwmod.h"
+#include "phex.h"
+#include <string>
+
 static ObjectPickable objectPickable;
 
 
@@ -77,6 +81,58 @@ extern Font *handwritingFont;
 extern Font *pencilFont;
 extern Font *pencilErasedFont;
 
+void LivingLifePage::hetuwDrawMainFont(const char* str, doublePair drawPos, TextAlignment align) {
+	mainFont->drawString( str, drawPos, align );
+}
+
+double LivingLifePage::hetuwMeasureStringMainFont(const char* str) {
+	return mainFont->measureString( str );
+}
+
+void LivingLifePage::hetuwDrawScaledMainFont(const char* str, doublePair drawPos, double customScale, TextAlignment align ) {
+	double scale = mainFont->hetuwGetScaleFactor();
+	mainFont->hetuwSetScaleFactor(scale * customScale);
+	mainFont->drawString( str, drawPos, align );
+	mainFont->hetuwSetScaleFactor(scale);
+}
+
+double LivingLifePage::hetuwMeasureScaledMainFont(const char* str, double customScale) {
+	double scale = mainFont->hetuwGetScaleFactor();
+	mainFont->hetuwSetScaleFactor(scale * customScale);
+	double r = mainFont->measureString( str );
+	mainFont->hetuwSetScaleFactor(scale);
+	return r;
+}
+
+void LivingLifePage::hetuwDrawWithHandwritingFont(const char* str, doublePair drawPos, TextAlignment align) {
+	handwritingFont->drawString( str, drawPos, align );
+}
+
+double LivingLifePage::hetuwMeasureStringHandwritingFont(const char* str) {
+	return handwritingFont->measureString( str );
+}
+
+void LivingLifePage::hetuwDrawScaledHandwritingFont(const char* str, doublePair drawPos, double customScale, TextAlignment align ) {
+	double scale = handwritingFont->hetuwGetScaleFactor();
+	handwritingFont->hetuwSetScaleFactor(scale * customScale);
+	handwritingFont->drawString( str, drawPos, align );
+	handwritingFont->hetuwSetScaleFactor(scale);
+}
+
+double LivingLifePage::hetuwMeasureScaledHandwritingFont(const char* str, double customScale) {
+	double scale = handwritingFont->hetuwGetScaleFactor();
+	handwritingFont->hetuwSetScaleFactor(scale * customScale);
+	double r = handwritingFont->measureString( str );
+	handwritingFont->hetuwSetScaleFactor(scale);
+	return r;
+}
+
+void LivingLifePage::hetuwSay(const char* text) {
+	//printf("hetuw say: %s\n", text);
+	char *message = autoSprintf( "SAY 0 0 %s#", text );
+	sendToServerSocket( message );
+	delete[] message;
+}
 
 // seconds
 static double maxCurseTagDisplayGap = 15.0;
@@ -87,6 +143,7 @@ static float pencilErasedFontExtraFade = 0.15;
 
 
 extern doublePair lastScreenViewCenter;
+doublePair LivingLifePage::hetuwGetLastScreenViewCenter() { return lastScreenViewCenter; }
 
 static char shouldMoveCamera = true;
 
@@ -113,7 +170,10 @@ static doublePair vogPos = { 0, 0 };
 
 static char vogPickerOn = false;
 
+bool LivingLifePage::hetuwIsVogMode() { return vogMode; }
+doublePair LivingLifePage::hetuwGetVogPos() { return vogPos; }
     
+int LivingLifePage::hetuwGetYumBonus() { return mYumBonus; }
 
 extern float musicLoudness;
 
@@ -163,6 +223,8 @@ static char *photoSig = NULL;
 static char waitingForPhotoID = false;
 
 
+
+void LivingLifePage::hetuwSetTakingPhoto(bool b) { takingPhoto = b; }
 
 // no moving for first 20 seconds of life
 static double noMoveAge = 0.20;
@@ -421,6 +483,7 @@ static void removeAllTempHomeLocations() {
 
 
 static void addHomeLocation( int inX, int inY ) {
+	HetuwMod::addHomeLocation( inX, inY, HetuwMod::hpt_home );
     removeAllTempHomeLocations();
 
     removeHomeLocation( inX, inY );
@@ -519,6 +582,9 @@ static void addTempHomeLocation( int inX, int inY,
                                  char inPerson, int inPersonID,
                                  LiveObject *inPersonO,
                                  const char *inPersonKey ) {
+	if (!inPerson) HetuwMod::addHomeLocation( inX, inY, HetuwMod::hpt_map );
+	else if (inPersonKey && strstr(inPersonKey, "expt")) HetuwMod::addHomeLocation( inX, inY, HetuwMod::hpt_expert, 0, inPersonID );
+	else HetuwMod::addPersonHomeLocation( inX, inY, inPersonID );
     if( ! doesNewTempLocationTrumpPrevious( inPersonKey ) ) {
         // existing key has higher priority
         // don't replace with this new key
@@ -1078,7 +1144,7 @@ void LivingLifePage::sendToServerSocket( char *inMessage ) {
         if( mFirstServerMessagesReceived  ) {
             
             if( mDeathReason != NULL ) {
-                delete [] mDeathReason;
+                // delete [] mDeathReason; // hetuw mod
                 }
             mDeathReason = stringDuplicate( translate( "reasonDisconnected" ) );
             
@@ -1225,8 +1291,27 @@ static double computeCurrentAge( LiveObject *inObj ) {
     
     }
 
+double LivingLifePage::hetuwGetAge( LiveObject *inObj ) {
+	return computeCurrentAge( inObj );
+}
 
+void LivingLifePage::hetuwGetStringAge( char* str, LiveObject *inObj ) {
+	int age = (int)(computeCurrentAge(inObj)*10);
+	int ageDecimal = age - int(age*0.1)*10;
+	age = (int)((age-ageDecimal)*0.1);
+	sprintf(str, "%i.%i", age, ageDecimal);
+}
 
+int LivingLifePage::hetuwGetTextLengthLimit() {
+	LiveObject *ourLiveObject = getOurLiveObject();
+	double age = computeCurrentAge( ourLiveObject );
+	int sayCap = (int)( floor( age ) + 1 );
+	if( ourLiveObject->lineage.size() == 0  && sayCap < 30 ) {
+		// eve has a larger say limit
+		sayCap = 30;
+	}
+	return sayCap;
+}
 
 
 
@@ -2547,6 +2632,54 @@ static double remapPeakSeconds = 60;
 static double remapDelaySeconds = 30;
 
 
+void LivingLifePage::hetuwSetNextActionMessage(const char* msg, int x, int y) {
+	if( nextActionMessageToSend != NULL ) {
+		delete [] nextActionMessageToSend;
+		nextActionMessageToSend = NULL;
+	}
+
+//	int mapX = x - mMapOffsetX + mMapD / 2;
+//	int mapY = y - mMapOffsetY + mMapD / 2;
+//	int destID = mMap[ mapY * mMapD + mapX ];
+//	if( destID > 0 ) {
+//		mCurMouseOverID = destID;
+//	}
+//	mCurMouseOverSpot.x = mapX;
+//	mCurMouseOverSpot.y = mapY;
+//	mCurMouseOverWorld.x = x;
+//	mCurMouseOverWorld.y = y;
+
+	playerActionTargetX = x;
+	playerActionTargetY = y;
+	playerActionTargetNotAdjacent = true;
+	nextActionDropping = false;
+	nextActionEating = false;
+	nextActionMessageToSend = autoSprintf( "%s", msg );
+}
+
+void LivingLifePage::hetuwSetNextActionDropping( bool b ) {
+	nextActionDropping = b;
+}
+
+void LivingLifePage::hetuwSetNextActionEating( bool b ) {
+	nextActionEating = b;
+}
+
+int LivingLifePage::hetuwGetMapI( int tileX, int tileY ) {
+	int mapX = tileX - mMapOffsetX + mMapD / 2;
+	int mapY = tileY - mMapOffsetY + mMapD / 2;
+	if (mapX >= mMapD || mapY >= mMapD) return -1;
+	return mapY * mMapD + mapX;
+}
+
+int LivingLifePage::hetuwGetObjId( int tileX, int tileY ) {
+	int mapX = tileX - mMapOffsetX + mMapD / 2;
+	int mapY = tileY - mMapOffsetY + mMapD / 2;
+	int i = mapY * mMapD + mapX;
+	if (i < 0 || i >= mMapD*mMapD) return -1;
+	return mMap[i];
+}
+
 static Image *expandToPowersOfTwoWhite( Image *inImage ) {
     
     int w = 1;
@@ -2661,7 +2794,7 @@ LivingLifePage::LivingLifePage()
           mChalkBlotSprite( loadWhiteSprite( "chalkBlot.tga" ) ),
           mPathMarkSprite( loadWhiteSprite( "pathMark.tga" ) ),
           mSayField( handwritingFont, 0, 1000, 10, true, NULL,
-                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-,'?!/ " ),
+                     "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-,'?!/ 0123456789" ),
           mDeathReason( NULL ),
           mShowHighlights( true ),
           mUsingSteam( false ),
@@ -2767,12 +2900,18 @@ LivingLifePage::LivingLifePage()
     mSayField.unfocus();
     
     
-    mNotePaperHideOffset.x = -282;
-    mNotePaperHideOffset.y = -420;
+    mNotePaperHideOffset.x = -242;
+    mNotePaperHideOffset.y = -420 - HetuwMod::panelOffsetY;
 
 
-    mHomeSlipHideOffset[0].x = -41;
-    mHomeSlipHideOffset[0].y = -360;
+    mHomeSlipHideOffset[0].x = 0;
+    mHomeSlipHideOffset[0].y = -360 - HetuwMod::panelOffsetY;
+    //mNotePaperHideOffset.x = -282; // vanilla
+    //mNotePaperHideOffset.y = -420;
+
+
+    //mHomeSlipHideOffset[0].x = -41; // vanilla
+    //mHomeSlipHideOffset[0].y = -360;
 
     mHomeSlipHideOffset[1].x =  30;
     mHomeSlipHideOffset[1].y = -360;
@@ -2783,12 +2922,12 @@ LivingLifePage::LivingLifePage()
 
 
     for( int i=0; i<NUM_YUM_SLIPS; i++ ) {    
-        mYumSlipHideOffset[i].x = -600;
-        mYumSlipHideOffset[i].y = -330;
+        mYumSlipHideOffset[i].x = -140; // hetuw mod - vanilla is -600
+        mYumSlipHideOffset[i].y = -330 - HetuwMod::panelOffsetY;
         }
     
-    mYumSlipHideOffset[2].x += 70;
-    mYumSlipHideOffset[3].x += 80;
+    mYumSlipHideOffset[2].x += 60; // hetuw mod - vanilla is 70
+    mYumSlipHideOffset[3].x += 70; // hetuw mod - vanilla is 80
 
     for( int i=0; i<NUM_YUM_SLIPS; i++ ) {    
         mYumSlipPosOffset[i] = mYumSlipHideOffset[i];
@@ -2797,11 +2936,16 @@ LivingLifePage::LivingLifePage()
     
 
     for( int i=0; i<3; i++ ) {    
-        mHungerSlipShowOffsets[i].x = -558;
-        mHungerSlipShowOffsets[i].y = -250;
+        mHungerSlipShowOffsets[i].x = -540;
+        mHungerSlipShowOffsets[i].y = -250 - HetuwMod::panelOffsetY;
     
-        mHungerSlipHideOffsets[i].x = -558;
-        mHungerSlipHideOffsets[i].y = -370;
+        mHungerSlipHideOffsets[i].x = -540;
+        mHungerSlipHideOffsets[i].y = -370 - HetuwMod::panelOffsetY;
+        //mHungerSlipShowOffsets[i].x = -558; // vanilla
+        //mHungerSlipShowOffsets[i].y = -250;
+    
+        //mHungerSlipHideOffsets[i].x = -558; // vanilla
+        //mHungerSlipHideOffsets[i].y = -370;
         
         mHungerSlipWiggleTime[i] = 0;
         mHungerSlipWiggleAmp[i] = 0;
@@ -2812,7 +2956,7 @@ LivingLifePage::LivingLifePage()
 
     mHungerSlipShowOffsets[2].y -= 50;
     mHungerSlipShowOffsets[1].y -= 30;
-    mHungerSlipShowOffsets[0].y += 18;
+    mHungerSlipShowOffsets[0].y += 18; 
 
 
     mHungerSlipWiggleAmp[1] = 0.5;
@@ -2838,8 +2982,11 @@ LivingLifePage::LivingLifePage()
         mHintSheetSprites[i] = loadSprite( name, false );
         delete [] name;
         
-        mHintHideOffset[i].x = 900;
-        mHintHideOffset[i].y = -370;
+        mHintHideOffset[i].x = 900 + HetuwMod::panelOffsetX;
+        mHintHideOffset[i].y = -370 - HetuwMod::panelOffsetY;
+		if (HetuwMod::zoomScale >= 2.0f) {
+			mHintHideOffset[i].y -= 60;
+		}
         
         mHintTargetOffset[i] = mHintHideOffset[i];
         mHintPosOffset[i] = mHintHideOffset[i];
@@ -2898,16 +3045,16 @@ LivingLifePage::LivingLifePage()
 
     for( int i=0; i<NUM_HINT_SHEETS; i++ ) {
         
-        mTutorialHideOffset[i].x = -914;
+        mTutorialHideOffset[i].x = -914 - HetuwMod::panelOffsetX + HetuwMod::tutMessageOffsetX;
         mTutorialFlips[i] = false;
         
         if( i % 2 == 1 ) {
             // odd on right side of screen
-            mTutorialHideOffset[i].x = 914;
+            mTutorialHideOffset[i].x = 914 + HetuwMod::panelOffsetX - HetuwMod::tutMessageOffsetX2;
             mTutorialFlips[i] = true;
             }
         
-        mTutorialHideOffset[i].y = 430;
+        mTutorialHideOffset[i].y = 430 + HetuwMod::panelOffsetY;
         
         mTutorialTargetOffset[i] = mTutorialHideOffset[i];
         mTutorialPosOffset[i] = mTutorialHideOffset[i];
@@ -2918,9 +3065,9 @@ LivingLifePage::LivingLifePage()
         mTutorialMessage[i] = "";
 
 
-        mCravingHideOffset[i].x = -932;
+        mCravingHideOffset[i].x = -932 - HetuwMod::panelOffsetX;
         
-        mCravingHideOffset[i].y = -370;
+        mCravingHideOffset[i].y = -370 - HetuwMod::panelOffsetY;
         
         mCravingTargetOffset[i] = mCravingHideOffset[i];
         mCravingPosOffset[i] = mCravingHideOffset[i];
@@ -3068,9 +3215,12 @@ LivingLifePage::LivingLifePage()
     if( ! tutorialDone ) {
         mTutorialNumber = 1;
         }
+
+	// hetuw mod
+	mDeathReason = NULL;
+	HetuwMod::setLivingLifePage(this, &gameObjects, mMapContainedStacks, mMapSubContainedStacks, mMapD, mCurMouseOverID);
+
     }
-
-
 
 
 void LivingLifePage::runTutorial( int inNumber ) {
@@ -3338,6 +3488,7 @@ LivingLifePage::~LivingLifePage() {
 
     if( mDeathReason != NULL ) {
         delete [] mDeathReason;
+		mDeathReason = NULL; // hetuw mod
         }
 
     for( int i=0; i<mGraveInfo.size(); i++ ) {
@@ -3540,14 +3691,14 @@ void LivingLifePage::drawChalkBackgroundString( doublePair inPos,
     
     double firstLineY =  inPos.y + ( lines->size() - 1 ) * lineSpacing;
     
-    if( firstLineY > lastScreenViewCenter.y + 330 ) {
+    if( firstLineY > lastScreenViewCenter.y + 330 + HetuwMod::panelOffsetY) {
         // off top of screen
-        firstLineY = lastScreenViewCenter.y + 330;
+        firstLineY = lastScreenViewCenter.y + 330 + HetuwMod::panelOffsetY;
         }
     
-    if( inPos.y < lastScreenViewCenter.y - 280 ) {
+    if( inPos.y < lastScreenViewCenter.y - 280 - HetuwMod::panelOffsetY) {
         // off bottom of screen
-        double lastLineY = lastScreenViewCenter.y - 280;
+        double lastLineY = lastScreenViewCenter.y - 280 - HetuwMod::panelOffsetY;
         
         firstLineY = lastLineY + ( lines->size() - 1 ) * lineSpacing;
         }
@@ -3563,11 +3714,11 @@ void LivingLifePage::drawChalkBackgroundString( doublePair inPos,
             }
         }
     
-    if( inPos.x < lastScreenViewCenter.x - 615 ) {
-        inPos.x = lastScreenViewCenter.x - 615;
+    if( inPos.x < lastScreenViewCenter.x - 615 - HetuwMod::panelOffsetX) {
+        inPos.x = lastScreenViewCenter.x - 615 - HetuwMod::panelOffsetX;
         }
-    if( inPos.x + widestLine > lastScreenViewCenter.x + 610 ) {
-        inPos.x = lastScreenViewCenter.x + 610 - widestLine;
+    if( inPos.x + widestLine > lastScreenViewCenter.x + 610 + HetuwMod::panelOffsetX) {
+        inPos.x = lastScreenViewCenter.x + 610 - widestLine + HetuwMod::panelOffsetX;
         }
     
     
@@ -4281,6 +4432,10 @@ void LivingLifePage::drawMapCell( int inMapI,
         char flip = mMapTileFlips[ inMapI ];
         
         ObjectRecord *obj = getObject( oID );
+		if (!takingPhoto && HetuwMod::bxRay && obj->cachedHeight > CELL_D) {
+			if (HetuwMod::xRayOpacity == 0.0f) return;
+			HetuwMod::drawColorAlpha = HetuwMod::xRayOpacity;
+		}
         if( obj->noFlip ||
             ( obj->permanent && 
               ( obj->blocksWalking || obj->drawBehindPlayer || 
@@ -4330,6 +4485,7 @@ void LivingLifePage::drawMapCell( int inMapI,
         
         if( ! mShowHighlights ) {
             if( inHighlightOnly ) {
+				HetuwMod::drawColorAlpha = 1.0f;
                 return;
                 }
             highlight = false;
@@ -4347,11 +4503,13 @@ void LivingLifePage::drawMapCell( int inMapI,
         
         if( highlight && obj->noHighlight ) {
             if( inHighlightOnly ) {
+				HetuwMod::drawColorAlpha = 1.0f;
                 return;
                 }
             highlight = false;
             }
 
+		if (takingPhoto) highlight = false; // hetuw mod
         
         int numPasses = 1;
         int startPass = 0;
@@ -4529,7 +4687,6 @@ void LivingLifePage::drawMapCell( int inMapI,
 
 
 
-
         if( highlight ) {
             
             
@@ -4608,6 +4765,7 @@ void LivingLifePage::drawMapCell( int inMapI,
         drawSquare( pos, 14 );
         }
 
+	HetuwMod::drawColorAlpha = 1.0f;
     }
 
 
@@ -4673,10 +4831,10 @@ ObjectAnimPack LivingLifePage::drawLiveObject(
     SimpleVector<LiveObject *> *inSpeakers,
     SimpleVector<doublePair> *inSpeakersPos ) {    
 
-
     ObjectAnimPack returnPack;
     returnPack.inObjectID = -1;
 
+	if (HetuwMod::bHidePlayers) return returnPack;
 
     if( inObj->hide || inObj->outOfRange ) {
         return returnPack;
@@ -4758,6 +4916,7 @@ ObjectAnimPack LivingLifePage::drawLiveObject(
         targetY = inObj->actionTargetY;
         }
     else {
+		if (!takingPhoto) // hetuw mod
         setClothingHighlightFades( inObj->clothingHighlightFades );
         }
     
@@ -5452,7 +5611,7 @@ void LivingLifePage::drawHungerMaxFillLine( doublePair inAteWordsPos,
     
     
     doublePair barPos = { lastScreenViewCenter.x - 590, 
-                          lastScreenViewCenter.y - 334 };
+                          lastScreenViewCenter.y - 334 - HetuwMod::panelOffsetY };
     barPos.x -= 12;
     barPos.y -= 10;
     
@@ -6458,16 +6617,20 @@ void LivingLifePage::draw( doublePair inViewCenter,
             // don't draw waiting message, not connected yet
             if( userReconnect ) {
                 drawMessage( "waitingReconnect", pos );
+				HetuwMod::drawWaitingText(pos);
                 }
             }
         else if( userReconnect ) {
             drawMessage( "waitingReconnect", pos );
+			HetuwMod::drawWaitingText(pos);
             }
         else if( mPlayerInFlight ) {
             drawMessage( "waitingArrival", pos );
+			HetuwMod::drawWaitingText(pos);
             }
         else if( userTwinCode == NULL ) {
             drawMessage( "waitingBirth", pos );
+			HetuwMod::drawWaitingText(pos);
             }
         else {
             const char *sizeString = translate( "twins" );
@@ -6540,12 +6703,12 @@ void LivingLifePage::draw( doublePair inViewCenter,
         lrintf( lastScreenViewCenter.y / CELL_D ) - mMapOffsetY + mMapD/2;
     
     // more on left and right of screen to avoid wide object tops popping in
-    int xStart = gridCenterX - 7;
-    int xEnd = gridCenterX + 7;
+    int xStart = gridCenterX - (int)(ceil(7*HetuwMod::zoomScale)); // hetuw mod
+    int xEnd = gridCenterX + (int)(ceil(7*HetuwMod::zoomScale)); // hetuw mod
 
     // more on bottom of screen so that tall objects don't pop in
-    int yStart = gridCenterY - 6;
-    int yEnd = gridCenterY + 4;
+    int yStart = gridCenterY - (int)(ceil(5*HetuwMod::zoomScale) + 1); // default: 6 / hetuw mod
+    int yEnd = gridCenterY + (int)(ceil(5*HetuwMod::zoomScale) - 1); // default: 4 / hetuw mod
 
     if( xStart < 0 ) {
         xStart = 0;
@@ -6587,11 +6750,11 @@ void LivingLifePage::draw( doublePair inViewCenter,
     // tiles drawn on top).  However, given that we're not drawing anything
     // else out there, this should be okay from a performance standpoint.
 
-    int yStartFloor = gridCenterY - 4;
-    int yEndFloor = gridCenterY + 4;
+    int yStartFloor = gridCenterY - (int)(ceil(4*HetuwMod::zoomScale)); // default: 4 / hetuw mod
+    int yEndFloor = gridCenterY + (int)(ceil(4*HetuwMod::zoomScale)); // default: 4 / hetuw mod
 
-    int xStartFloor = gridCenterX - 6;
-    int xEndFloor = gridCenterX + 6;
+    int xStartFloor = gridCenterX - (int)(ceil(6*HetuwMod::zoomScale)); // default: 6 / hetuw mod
+    int xEndFloor = gridCenterX + (int)(ceil(6*HetuwMod::zoomScale)); // default: 6 / hetuw mod
 
     
 
@@ -8037,6 +8200,10 @@ void LivingLifePage::draw( doublePair inViewCenter,
                         heldToDrawOnTop.push_back( heldPack );
                         }
                     }
+
+				if ( !takingPhoto && o != ourLiveObject && HetuwMod::iDrawNames > 0 ) 
+					HetuwMod::drawPlayerNames( o );
+
                 ignoreWatchedObjectDraw( false );
                 }
             else if( drawRec.extraMovingObj ) {
@@ -8066,7 +8233,6 @@ void LivingLifePage::draw( doublePair inViewCenter,
                 drawMapCell( drawRec.mapI, drawRec.screenX, drawRec.screenY );
                 }
             }
-        
 
         // now draw non-behind-marked map objects in this row
         // OVER the player objects in this row (so that pick up and set down
@@ -9113,7 +9279,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
         
         setDrawColor( 1, 1, 1, apocalypseDisplayProgress );
         
-        drawRect( lastScreenViewCenter, 640, 360 );
+        drawRect( lastScreenViewCenter, 640*HetuwMod::zoomScale, 360*HetuwMod::zoomScale );
         
         toggleAdditiveBlend( false );
         }
@@ -9121,7 +9287,14 @@ void LivingLifePage::draw( doublePair inViewCenter,
     
     if( takingPhoto ) {
 
-        if( photoSequenceNumber == -1 ) {
+		if (HetuwMod::takingSpecialPhoto) {
+            int screenWidth, screenHeight;
+            getScreenDimensions( &screenWidth, &screenHeight );
+			hetuwTakePhoto();
+			HetuwMod::takingSpecialPhoto = false;
+            takingPhoto = false;
+			HetuwMod::setTakingPhoto(takingPhoto);
+        } else if( photoSequenceNumber == -1 ) {
             photoSequenceNumber = getNextPhotoSequenceNumber();
             }
         else if( photoSig == NULL && ! waitingForPhotoSig ) {            
@@ -9134,6 +9307,9 @@ void LivingLifePage::draw( doublePair inViewCenter,
             delete [] message;
             }
         else if( photoSig != NULL && ! waitingForPhotoID ) {
+			float currentZoom = HetuwMod::zoomScale;
+			HetuwMod::setZoom( 1.0f );
+
             doublePair pos;
             
             pos.x = takingPhotoGlobalPos.x;
@@ -9199,7 +9375,6 @@ void LivingLifePage::draw( doublePair inViewCenter,
                     }
                 }
             
-
             takePhoto( pos, takingPhotoFlip ? -1 : 1,
                        photoSequenceNumber,
                        photoSig,
@@ -9208,6 +9383,14 @@ void LivingLifePage::draw( doublePair inViewCenter,
                        &subjectIDs,
                        &subjectNames );
             
+            takingPhoto = false;
+			HetuwMod::setTakingPhoto(takingPhoto);
+            delete [] photoSig;
+            photoSig = NULL;
+            photoSequenceNumber = -1;
+            waitingForPhotoSig = false;
+
+			HetuwMod::setZoom( currentZoom );
             waitingForPhotoID = true;
             }
         else if( waitingForPhotoID ) {
@@ -9553,7 +9736,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
     
 
 
-    for( int j=0; j<2; j++ ) {
+    for( int j=0; j<1; j++ ) { // hetuw mod - only draw first home - vanilla: j<2 
         doublePair slipPos = add( mHomeSlipPosOffset[j], lastScreenViewCenter );
         
         if( ! equal( mHomeSlipPosOffset[j], mHomeSlipHideOffset[j] ) ) {
@@ -9781,18 +9964,19 @@ void LivingLifePage::draw( doublePair inViewCenter,
 
     double highestCravingYOffset = 0;
     
-    if( mLiveCravingSheetIndex != -1 ) {
+	// hetuw mod commented out - so hungerSlip and Yum indicator are not drawn higher
+    //if( mLiveCravingSheetIndex != -1 ) {
         // craving showing
         // find highest one
-        highestCravingYOffset = 0;
+    //    highestCravingYOffset = 0;
                 
-        for( int c=0; c<NUM_HINT_SHEETS; c++ ) {
-            double offset = mCravingPosOffset[c].y - mCravingHideOffset[c].y;
-            if( offset > highestCravingYOffset ) {
-                highestCravingYOffset = offset;
-                }
-            }
-        }
+    //    for( int c=0; c<NUM_HINT_SHEETS; c++ ) {
+    //        double offset = mCravingPosOffset[c].y - mCravingHideOffset[c].y;
+    //        if( offset > highestCravingYOffset ) {
+    //            highestCravingYOffset = offset;
+    //            }
+    //        }
+    //    }
     
 
 
@@ -10129,6 +10313,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
     setDrawColor( 1, 1, 1, 1 );
     doublePair panelPos = lastScreenViewCenter;
     panelPos.y -= 242 + 32 + 16 + 6;
+	panelPos.y -= HetuwMod::panelOffsetY;
     drawSprite( mGuiPanelSprite, panelPos );
 
     if( ourLiveObject != NULL &&
@@ -10159,7 +10344,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
 
         // show as a sigil to right of temp meter
         doublePair curseTokenPos = { lastScreenViewCenter.x + 621, 
-                                     lastScreenViewCenter.y - 316 };
+                                     lastScreenViewCenter.y - 316 - HetuwMod::panelOffsetY };
         curseTokenFont->drawString( "C", curseTokenPos, alignCenter );
         curseTokenFont->drawString( "+", curseTokenPos, alignCenter );
         curseTokenPos.x += 6;
@@ -10183,10 +10368,10 @@ void LivingLifePage::draw( doublePair inViewCenter,
 
         setDrawColor( 1, 1, 1, 1 );
         toggleMultiplicativeBlend( true );
-
+		
         for( int i=0; i<ourLiveObject->foodCapacity; i++ ) {
             doublePair pos = { lastScreenViewCenter.x - 590, 
-                               lastScreenViewCenter.y - 334 };
+                               lastScreenViewCenter.y - 334 - HetuwMod::panelOffsetY };
         
             pos.x += i * 30;
             drawSprite( 
@@ -10207,7 +10392,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
         for( int i=ourLiveObject->foodCapacity; 
              i < ourLiveObject->maxFoodCapacity; i++ ) {
             doublePair pos = { lastScreenViewCenter.x - 590, 
-                               lastScreenViewCenter.y - 334 };
+                               lastScreenViewCenter.y - 334 - HetuwMod::panelOffsetY };
             
             pos.x += i * 30;
             drawSprite( 
@@ -10225,7 +10410,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
                 
         
         doublePair pos = { lastScreenViewCenter.x + 546, 
-                           lastScreenViewCenter.y - 319 };
+                           lastScreenViewCenter.y - 319 - HetuwMod::panelOffsetY };
 
         if( mCurrentArrowHeat != -1 ) {
             
@@ -10287,7 +10472,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
 
         for( int i=0; i<mOldDesStrings.size(); i++ ) {
             doublePair pos = { lastScreenViewCenter.x, 
-                               lastScreenViewCenter.y - 313 };
+                               lastScreenViewCenter.y - 313 - HetuwMod::panelOffsetY };
             float fade =
                 mOldDesFades.getElementDirect( i );
             
@@ -10297,7 +10482,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
             }
 
         doublePair yumPos = { lastScreenViewCenter.x - 480, 
-                              lastScreenViewCenter.y - 313 };
+                              lastScreenViewCenter.y - 313 - HetuwMod::panelOffsetY };
         
         setDrawColor( 0, 0, 0, 1 );
         if( mYumBonus > 0 ) {    
@@ -10321,7 +10506,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
 
 
         doublePair atePos = { lastScreenViewCenter.x, 
-                              lastScreenViewCenter.y - 347 };
+                              lastScreenViewCenter.y - 347 - HetuwMod::panelOffsetY };
         
         int shortestFill = 100;
         
@@ -10397,7 +10582,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
 
 
         doublePair tipPos = { lastScreenViewCenter.x, 
-                           lastScreenViewCenter.y - 313 };
+                           lastScreenViewCenter.y - 313 - HetuwMod::panelOffsetY};
 
         char overTempMeter = false;
         
@@ -10427,7 +10612,6 @@ void LivingLifePage::draw( doublePair inViewCenter,
             if( mCurMouseOverID == 0 ) {
                 idToDescribe = mLastMouseOverID;
                 }
-
             
             
 
@@ -10597,6 +10781,12 @@ void LivingLifePage::draw( doublePair inViewCenter,
                     
                     desToDelete = des;
                     }
+				if ( otherObj != NULL ) { // hetuw mod
+					char ageStr[16]; // hetuw mod
+					hetuwGetStringAge( ageStr, otherObj ); // hetuw mod
+                    des = autoSprintf( "%s %s", des, ageStr ); // hetuw mod
+                    desToDelete = des; // hetuw mod
+					} // hetuw mod
                 }
             else if( badBiome ) {
                 // we're over a bad biome
@@ -11016,7 +11206,8 @@ void LivingLifePage::draw( doublePair inViewCenter,
             }
         }
 
-    
+	HetuwMod::livingLifeDraw();
+
     if( vogMode ) {
         // draw again, so we can see picker
         PageComponent::base_draw( inViewCenter, inViewSize );
@@ -11140,6 +11331,9 @@ void dropPendingReceivedMessagesRegardingID( LiveObject *inPlayer,
     }
 
 
+bool LivingLifePage::hetuwUsesGlobalOffset() {
+	return mMapGlobalOffsetSet && (mMapGlobalOffset.x != 0 || mMapGlobalOffset.y != 0);
+}
 
 
 void LivingLifePage::applyReceiveOffset( int *inX, int *inY ) {
@@ -11300,7 +11494,7 @@ static char isFood( int inID ) {
 
 
 
-static char getTransHintable( TransRecord *inTrans ) {
+char LivingLifePage::getTransHintable( TransRecord *inTrans ) {
 
     if( inTrans->lastUseActor ) {
         return false;
@@ -14102,6 +14296,7 @@ void LivingLifePage::step() {
         sendToServerSocket( (char*)"KA 0 0#" );
         }
     
+	HetuwMod::livingLifeStep();
 
     if( showFPS ) {
         timeMeasures[1] += game_getCurrentTime() - updateStartTime;
@@ -14159,6 +14354,7 @@ void LivingLifePage::step() {
                 
                 if( numLines > 1 ) {
                     displayGlobalMessage( lines[1] );
+                    HetuwMod::writeLineToLogs("globalMessage", string(lines[1]));
                     }
                 for( int i=0; i<numLines; i++ ) {
                     delete [] lines[i];
@@ -14398,11 +14594,15 @@ void LivingLifePage::step() {
                     "%199s\n"
                     "%d\n", &currentPlayers, &maxPlayers, challengeString, 
                     &mRequiredVersion );
-            
+			if (mRequiredVersion > versionNumber) { // hetuw mod
+				HetuwMod::onInvalidVersionDetected(versionNumber, mRequiredVersion);
+				versionNumber = mRequiredVersion; // hetuw mod - ignore client version check - join server even if client is outdated
+			}
 
-            if( mRequiredVersion > versionNumber ||
-                ( mRequiredVersion < versionNumber &&
-                  mRequiredVersion < dataVersionNumber ) ) {
+            //if( mRequiredVersion > versionNumber ||
+            //    ( mRequiredVersion < versionNumber &&
+            //      mRequiredVersion < dataVersionNumber ) ) {
+            if( mRequiredVersion > versionNumber ) { // hetuw mod - commented out 3 lines above to allow joining outdated / custom servers
                 
                 // if server is using a newer version than us, we must upgrade
                 // our client
@@ -14560,6 +14760,7 @@ void LivingLifePage::step() {
             apocalypseInProgress = true;
             }
         else if( type == APOCALYPSE_DONE ) {
+			HetuwMod::writeLineToLogs("apocalypse", "");
             apocalypseDisplayProgress = 0;
             apocalypseInProgress = false;
             homePosStack.deleteAll();
@@ -14591,6 +14792,7 @@ void LivingLifePage::step() {
                     
                     if( d > 32 ) {
                         addAncientHomeLocation( posX, posY );
+						HetuwMod::addHomeLocation( posX, posY, (monumentID == HetuwMod::OBJID_EndTowerSound) ? HetuwMod::hpt_apoc : HetuwMod::hpt_bell );
                         isAncientHomePosHell = false;
                         
                         // play sound in distance
@@ -15131,11 +15333,13 @@ void LivingLifePage::step() {
                 mObjectPicker.setPosition( vogPos.x * CELL_D + 510,
                                            vogPos.y * CELL_D + 90 );
 
+				if (!HetuwMod::isMovingInVog) {
                 // jump camp instantly
                 lastScreenViewCenter.x = posX * CELL_D;
                 lastScreenViewCenter.y = posY * CELL_D;
                 setViewCenterPosition( lastScreenViewCenter.x,
                                        lastScreenViewCenter.y );
+				}
 
                 mCurMouseOverCellFade = 1.0;
                 
@@ -16153,6 +16357,7 @@ void LivingLifePage::step() {
                                 takingPhotoGlobalPos.y = y;
                                 takingPhotoFlip = mMapTileFlips[ mapI ];
                                 takingPhoto = true;
+								HetuwMod::setTakingPhoto(takingPhoto);
                                 }
                             
                             }
@@ -16787,6 +16992,8 @@ void LivingLifePage::step() {
                                       &heldYum,
                                       &heldLearned );
                 
+                HetuwMod::onPlayerUpdate( &o, lines[i] );
+
                 char *lineCopy = NULL;
                 if( numRead >= 21 ) {
                     // scanned all but skipped strings
@@ -16989,6 +17196,7 @@ void LivingLifePage::step() {
                                 getObject( o.holdingID )->foodValue > 0 ) {
                                 // MEH
                                 slipIndexToShow = 3;
+								HetuwMod::foodIsMeh(getObject(o.holdingID));
                                 }
                             }
                         
@@ -17521,7 +17729,8 @@ void LivingLifePage::step() {
                                 otherSoundPlayed = true;
                                 }
                             if( strstr( ateObj->description, "remapStart" )
-                                != NULL ) {
+                                != NULL &&
+                                HetuwMod::bRemapStart ) {
                                 
                                 if( mRemapPeak == 0 ) {
                                     // reseed
@@ -18521,6 +18730,7 @@ void LivingLifePage::step() {
                                            o.currentPos.x,
                                            o.currentPos.y ) );
                             }
+						HetuwMod::writeLineToLogs("player", to_string(o.id) + hetuwLogSeperator + "age:"+to_string((int)hetuwGetAge(&o)));
                         
                         // insert in age order, youngest last
                         double newAge = computeCurrentAge( &o );
@@ -18563,6 +18773,7 @@ void LivingLifePage::step() {
 
                     if( mDeathReason != NULL ) {
                         delete [] mDeathReason;
+						mDeathReason = NULL; // hetuw mod
                         }
                     char *reasonPos = strstr( lines[i], "reason" );
                     
@@ -18890,7 +19101,10 @@ void LivingLifePage::step() {
                 
                 ourID = ourObject->id;
 
+				HetuwMod::initOnServerJoin();
                 if( ourID != lastPlayerID ) {
+                    homePosStack.deleteAll();
+					HetuwMod::initOnBirth();
                     // different ID than last time, delete old home markers
                     oldHomePosStack.deleteAll();
                     }
@@ -19581,6 +19795,11 @@ void LivingLifePage::step() {
                             
                             char famSpeech = false;
                             if( firstSpace != NULL ) {
+
+								//string name = to_string(existing->id); // hetuw mod
+								//if (existing->name) name = name + " " + string(existing->name); // hetuw mod
+								//HetuwMod::writeLineToLogs("say", name + hetuwLogSeperator + string(&firstSpace[1])); // hetuw mod
+
                                 // check for +FAMILY+
                                 // only show it if the person is NOT
                                 // currently talking, but remember it
@@ -19842,6 +20061,7 @@ void LivingLifePage::step() {
                                                                  personID,
                                                                  personO,
                                                                  personKey );
+											if (!person) HetuwMod::setMapText(existing->currentSpeech, mapX, mapY);
                                             }
 
                                         if( personID != -1 && baby) {
@@ -20385,6 +20605,7 @@ void LivingLifePage::step() {
                                     existing->lastCurseTagDisplayTime = curTime;
                                     existing->speechIsOverheadLabel = false;
                                     }
+                                HetuwMod::onCurseUpdate(existing);
                                 }
                             break;
                             }
@@ -20454,6 +20675,7 @@ void LivingLifePage::step() {
                                 char *nameStart = &( firstSpace[1] );
                                 
                                 existing->name = stringDuplicate( nameStart );
+								HetuwMod::onNameUpdate(existing);
                                 }
                             
                             break;
@@ -20717,6 +20939,9 @@ void LivingLifePage::step() {
                     }
                 
                 if( mYumMultiplier != oldYumMultiplier ) {
+                    if( mYumMultiplier == 0 ) { // hetuw mod
+                        HetuwMod::yummyFoodChain.deleteAll(); // hetuw mod
+                        } // hetuw mod
                     int oldSlipIndex = -1;
                     int newSlipIndex = 0;
                     
@@ -20838,7 +21063,7 @@ void LivingLifePage::step() {
                 
                     if( lastAteID != 0 ) {
                         ObjectRecord *lastAteObj = getObject( lastAteID );
-                        
+                        HetuwMod::onJustAteFood(lastAteObj);
                         char *strUpper = stringToUpperCase(
                             lastAteObj->description );
 
@@ -20912,12 +21137,12 @@ void LivingLifePage::step() {
                         mHungerSlipVisible = 0;
                         }
                     else if( ourLiveObject->foodStore + mYumBonus <= 4 &&
-                             curAge >= 57.33 ) {
+                             curAge >= 10000 ) { // hetuw mod - always play hunger sounds
                         mHungerSlipVisible = 2;
                         mPulseHungerSound = false;
                         }
                     else if( ourLiveObject->foodStore + mYumBonus <= 4 &&
-                             curAge < 57.33 ) {
+                             curAge < 10000 ) { // hetuw mod - always play hunger sounds
                         
                         // don't play hunger sounds at end of life
                         // because it interrupts our end-of-life song
@@ -20956,7 +21181,7 @@ void LivingLifePage::step() {
                         }
 
                     if( ourLiveObject->foodStore + mYumBonus > 4 ||
-                        computeCurrentAge( ourLiveObject ) >= 57 ) {
+                        computeCurrentAge( ourLiveObject ) >= 60 ) {
                         // restore music
                         setMusicLoudness( musicLoudness );
                         
@@ -21066,7 +21291,7 @@ void LivingLifePage::step() {
         doublePair screenTargetPos = 
             mult( targetObjectPos, CELL_D );
         
-        if( vogMode ) {
+        if( vogMode || true ) { // hetuw mod || true
             // don't adjust camera
             }
         else if( 
@@ -21160,7 +21385,7 @@ void LivingLifePage::step() {
             
             }
 
-        if( ! vogMode ) {
+        if( ! vogMode && false ) { // hetuw mod && false
             
             screenTargetPos.x = 
                 CELL_D * targetObjectPos.x - 
@@ -21182,11 +21407,16 @@ void LivingLifePage::step() {
         
 
         doublePair dir = sub( screenTargetPos, lastScreenViewCenter );
+		if (vogMode && length(dir) > 500) { // hetuw mod - to prevent the camera from lagging behind - not the best fix but i couldnt find the camera moving code
+			lastScreenViewCenter.x += dir.x*0.08; // hetuw mod
+			lastScreenViewCenter.y += dir.y*0.08; // hetuw mod
+			setViewCenterPosition( lastScreenViewCenter.x, lastScreenViewCenter.y ); // hetuw mod
+		} // hetuw mod
         
         char viewChange = false;
         
-        int maxRX = visibleViewWidth / 15;
-        int maxRY = viewHeight / 15;
+        int maxRX = 1; // hetuw mod (default: visibleViewWidth / 15)
+        int maxRY = 1; // hetuw mod (default: viewHeight / 15)
         int maxR = 0;
         double moveSpeedFactor = 20 * cameraFollowsObject->currentSpeed;
         
@@ -21776,7 +22006,7 @@ void LivingLifePage::step() {
                         }
                     }
                 else if( o->id == ourID && o->pathLength >= 2 &&
-                         nextActionMessageToSend == NULL &&
+                         nextActionMessageToSend == NULL && !HetuwMod::stopAutoRoadRun &&
                          distance( endPos, o->currentPos )
                          < o->currentSpeed ) {
 
@@ -22079,7 +22309,6 @@ void LivingLifePage::step() {
               ourLiveObject->yd == playerActionTargetY ) 
             ||
             playerActionTargetNotAdjacent ) ) {
-        
         // done moving on client end
         // can start showing pending action animation, even if 
         // end of motion not received from server yet
@@ -22121,7 +22350,6 @@ void LivingLifePage::step() {
             0.166 - ourLiveObject->lastResponseTimeDelta &&
             ourLiveObject->xd == ourLiveObject->xServer &&
             ourLiveObject->yd == ourLiveObject->yServer ) {
-            
  
             // move end acked by server AND action animation in progress
 
@@ -22542,6 +22770,7 @@ void LivingLifePage::makeActive( char inFresh ) {
     
 
     takingPhoto = false;
+	HetuwMod::setTakingPhoto(takingPhoto);
     photoSequenceNumber = -1;
     waitingForPhotoSig = false;
     waitingForPhotoID = false;
@@ -22728,7 +22957,7 @@ void LivingLifePage::makeActive( char inFresh ) {
         mYumSlipPosTargetOffset[i] = mYumSlipHideOffset[i];
         mYumSlipNumberToShow[i] = 0;
         }
-    
+
 
     mCurrentArrowI = 0;
     mCurrentArrowHeat = -1;
@@ -23344,6 +23573,7 @@ void LivingLifePage::checkForPointerHit( PointerHitRecord *inRecord,
 void LivingLifePage::pointerMove( float inX, float inY ) {
     lastMouseX = inX;
     lastMouseY = inY;
+	HetuwMod::onMouseEvent(inX, inY);
         
     getLastMouseScreenPos( &lastScreenMouseX, &lastScreenMouseY );
 
@@ -23474,6 +23704,7 @@ void LivingLifePage::pointerMove( float inX, float inY ) {
             // store negative in place so that we can show their relation
             // string
             mCurMouseOverID = - p.hitOtherPersonID;
+			HetuwMod::onPlayerHoverOver(p.hitOtherPersonID);
             mCurMouseOverBiome = -1;
             }
         }
@@ -23642,8 +23873,25 @@ char LivingLifePage::getCellBlocksWalking( int inMapX, int inMapY ) {
         }
     }
 
+void LivingLifePage::hetuwClickMove( float x, float y ) {
+	float tMouseX = lastMouseX;
+	float tMouseY = lastMouseY;
+	mForceGroundClick = true;
+	pointerDown( x, y );
+	pointerUp( x, y );
+	mForceGroundClick = false;
+	lastMouseX = tMouseX;
+	lastMouseY = tMouseY;
+}
 
+void LivingLifePage::hetuwGetMouseXY( int &x, int &y ) {
+	x = lastMouseX;
+	y = lastMouseY;
+}
 
+bool LivingLifePage::hetuwMouseIsDown() {
+	return mouseDown;
+}
 
 
 static int savedXD = 0;
@@ -23714,6 +23962,11 @@ static void freeSavedPath() {
 
 
 void LivingLifePage::pointerDown( float inX, float inY ) {
+	if (!mForceGroundClick && HetuwMod::livingLifePageMouseDown( inX, inY ))
+		return;
+
+	if (Phex::onMouseDown(inX, inY)) return;
+	HetuwMod::onMouseEvent(inX, inY);
     lastMouseX = inX;
     lastMouseY = inY;
 
@@ -23732,7 +23985,7 @@ void LivingLifePage::pointerDown( float inX, float inY ) {
 
     char modClick = false;
     
-    if( ( mEKeyDown && mEKeyEnabled ) || isLastMouseButtonRight() ) {
+    if( ( mEKeyDown && mEKeyEnabled ) || ( isLastMouseButtonRight() && !mForceGroundClick ) ) { // hetuw mod && !mForceGroundClick
         modClick = true;
         }
     
@@ -24091,7 +24344,7 @@ void LivingLifePage::pointerDown( float inX, float inY ) {
             
             int id = mMap[mapI];
             
-            if( id == 0 || ! getObject( id )->permanent ) {
+            if( id == 0 || ( id > 0 && ! getObject( id )->permanent )) { // hetuw crash fix - id > 0
                 
                 // empty cell, or something we can swap held with
                 
@@ -25394,6 +25647,7 @@ void LivingLifePage::pointerDown( float inX, float inY ) {
 void LivingLifePage::pointerDrag( float inX, float inY ) {
     lastMouseX = inX;
     lastMouseY = inY;
+	HetuwMod::onMouseEvent(inX, inY);
     getLastMouseScreenPos( &lastScreenMouseX, &lastScreenMouseY );
     
     if( showBugMessage ) {
@@ -25403,6 +25657,8 @@ void LivingLifePage::pointerDrag( float inX, float inY ) {
 
 
 void LivingLifePage::pointerUp( float inX, float inY ) {
+	if (Phex::onMouseUp(inX, inY)) return;
+	HetuwMod::onMouseEvent(inX, inY);
     lastMouseX = inX;
     lastMouseY = inY;
 
@@ -25620,7 +25876,22 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
         return;
         }
 
-    
+	if (inASCII == 'x' || inASCII == 'X') { // hetuw mod - copied and pasted from below in order to allow the cancel of twinning waiting screen
+		if( userTwinCode != NULL &&
+			! mStartedLoadingFirstObjectSet ) {
+
+			closeSocket( mServerSocket );
+			mServerSocket = -1;
+
+			setWaiting( false );
+			setSignal( "twinCancel" );
+		}
+	}
+	if (!vogMode) {
+		if (Phex::hasFocus && mSayField.isFocused()) mSayField.unfocusAll();
+		if (HetuwMod::livingLifeKeyDown(inASCII) && inASCII != 'z') return;
+	}
+
     switch( inASCII ) {
         /*
         // useful for testing
@@ -25789,11 +26060,6 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
                 mZKeyDown = true;
                 }
             break;
-        case ' ':
-            if( ! mSayField.isFocused() ) {
-                shouldMoveCamera = false;
-                }
-            break;
         case 9: // tab
             if( mCurrentHintObjectID != 0 ) {
                 
@@ -25843,7 +26109,7 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
                 mZKeyDown = false;
                 mXKeyDown = false;
 
-                mSayField.setText( "" );
+                //mSayField.setText( "" ); // hetuw mod - save the words last said - dont reset
                 mSayField.focus();
                 }
             else if( mSayField.isFocused() ) {
@@ -25902,6 +26168,7 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
                             int emotIndex = getEmotionIndex( typedText );
                             
                             if( emotIndex != -1 ) {
+								HetuwMod::setEmote( emotIndex );
                                 char *message = 
                                     autoSprintf( "EMOT 0 0 %d#", emotIndex );
                                 
@@ -26192,6 +26459,11 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
                         
                         // send text to server
 
+						if (!vogMode) { // hetuw mod 
+							HetuwMod::Say(typedText);
+						} else {
+						// jasons code
+
                         const char *sayCommand = "SAY";
                         
                         if( vogMode ) {
@@ -26204,6 +26476,7 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
                         sendToServerSocket( message );
                         delete [] message;
                         }
+						}
                     
                     for( int i=0; i<mSentChatPhrases.size(); i++ ) {
                         if( strcmp( 
@@ -26244,6 +26517,8 @@ void LivingLifePage::specialKeyDown( int inKeyCode ) {
         // dead
         return;
         }
+
+	if (!vogMode) HetuwMod::livingLifeSpecialKeyDown( inKeyCode );
 
     if( vogMode && ! TextField::isAnyFocused() ) {
         GridPos posOffset = { 0, 0 };
@@ -26401,6 +26676,9 @@ void LivingLifePage::specialKeyDown( int inKeyCode ) {
         
 void LivingLifePage::keyUp( unsigned char inASCII ) {
 
+	if (HetuwMod::livingLifeKeyUp(inASCII))
+		return;
+
     switch( inASCII ) {
         case 'e':
         case 'E':
@@ -26415,12 +26693,118 @@ void LivingLifePage::keyUp( unsigned char inASCII ) {
             mXKeyDown = false;
             break;
         case ' ':
-            shouldMoveCamera = true;
+            //shouldMoveCamera = true; // hetuw mod
             break;
         }
 
     }
 
+void LivingLifePage::hetuwToggleFixCamera() {
+	shouldMoveCamera = !shouldMoveCamera;
+	HetuwMod::SetFixCamera(shouldMoveCamera);
+}
+
+// hetuw mod - if changes are made here they also need to be made in the constructor above
+void LivingLifePage::hetuwSetPanelOffsets() {
+    mNotePaperHideOffset.y = -420 - HetuwMod::panelOffsetY;
+    if( mSayField.isFocused() ) {
+        mNotePaperPosTargetOffset.y = mNotePaperHideOffset.y + 58;
+        char *partialSay = mSayField.getText();
+        char *strUpper = stringToUpperCase( partialSay );
+        delete [] partialSay;
+        SimpleVector<char*> *lines = splitLines( strUpper, 345 );
+        if( lines->size() > 1 ) {    
+            mNotePaperPosTargetOffset.y += 20 * ( lines->size() - 1 );
+        }
+	} else {
+        mNotePaperPosTargetOffset.y = mNotePaperHideOffset.y;
+	}
+	mNotePaperPosOffset = mNotePaperPosTargetOffset;
+
+	LiveObject* ourObject = getOurLiveObject();
+    mHomeSlipHideOffset[0].y = -360 - HetuwMod::panelOffsetY;
+	if ( ourObject ) {
+	    char tooClose = false;
+		double homeDist = 0;
+		int homeArrow = getHomeDir( ourObject->currentPos, &homeDist, &tooClose );
+		if( homeArrow != -1 && ! tooClose ) {
+			mHomeSlipPosTargetOffset[0].y = mHomeSlipHideOffset[0].y + 68;
+			if( homeDist > 1000 ) {
+				mHomeSlipPosTargetOffset[0].y += 20;
+			}
+		} else {
+			mHomeSlipPosTargetOffset[0].y = mHomeSlipHideOffset[0].y;
+		}
+		mHomeSlipPosOffset[0] = mHomeSlipPosTargetOffset[0];
+	}
+
+    for( int i=0; i<NUM_YUM_SLIPS; i++ ) {
+		int targetDiffY = mYumSlipPosTargetOffset[i].y - mYumSlipHideOffset[i].y;
+		int posDiffY = mYumSlipPosOffset[i].y - mYumSlipHideOffset[i].y;
+        mYumSlipHideOffset[i].y = -330 - HetuwMod::panelOffsetY;
+        mYumSlipPosOffset[i] = mYumSlipHideOffset[i];
+        mYumSlipPosTargetOffset[i] = mYumSlipHideOffset[i];
+		mYumSlipPosOffset[i].y += posDiffY;
+		mYumSlipPosTargetOffset[i].y += targetDiffY;
+	}
+	int tempmHungerSlipHideOffsetsY[3];
+    for( int i=0; i<3; i++ ) {
+		tempmHungerSlipHideOffsetsY[i] = mHungerSlipHideOffsets[i].y; 
+        mHungerSlipShowOffsets[i].y = -250 - HetuwMod::panelOffsetY;
+        mHungerSlipHideOffsets[i].y = -370 - HetuwMod::panelOffsetY;
+	}
+    mHungerSlipShowOffsets[2].y += 20;
+    mHungerSlipHideOffsets[2].y -= 20;
+
+    mHungerSlipShowOffsets[2].y -= 50; // starving slip
+    mHungerSlipShowOffsets[1].y -= 30; // hunger slip
+    mHungerSlipShowOffsets[0].y += 18; // full slip
+    for( int i=0; i<3; i++ ) {    
+		int targetDiffY = mHungerSlipPosTargetOffset[i].y - tempmHungerSlipHideOffsetsY[i];
+		int posDiffY = mHungerSlipPosOffset[i].y - tempmHungerSlipHideOffsetsY[i];
+        mHungerSlipPosOffset[i] = mHungerSlipHideOffsets[i];
+        mHungerSlipPosTargetOffset[i] = mHungerSlipPosOffset[i];
+		mHungerSlipPosOffset[i].y += posDiffY;
+		mHungerSlipPosTargetOffset[i].y += targetDiffY;
+    }
+    for( int i=0; i<NUM_HINT_SHEETS; i++ ) {
+		int targetDiffY = mHintTargetOffset[i].y - mHintHideOffset[i].y;
+		int posDiffY = mHintPosOffset[i].y - mHintHideOffset[i].y;
+        mHintHideOffset[i].x = 900 + HetuwMod::panelOffsetX;
+        mHintHideOffset[i].y = -370 - HetuwMod::panelOffsetY;
+		if (HetuwMod::zoomScale >= 2.0f) {
+			mHintHideOffset[i].y -= 60;
+		}
+        mHintTargetOffset[i] = mHintHideOffset[i];
+        mHintPosOffset[i] = mHintHideOffset[i];
+		mHintTargetOffset[i].y += targetDiffY;
+		mHintPosOffset[i].y += posDiffY;
+	}
+    for( int i=0; i<NUM_HINT_SHEETS; i++ ) {
+		int targetDiffY = mTutorialTargetOffset[i].y - mTutorialHideOffset[i].y;
+		int posDiffY = mTutorialPosOffset[i].y - mTutorialHideOffset[i].y;
+
+        mTutorialHideOffset[i].y = 430 + HetuwMod::panelOffsetY;
+
+        mTutorialHideOffset[i].x = -914 - HetuwMod::panelOffsetX + HetuwMod::tutMessageOffsetX;
+        if( i % 2 == 1 ) {
+            mTutorialHideOffset[i].x = 914 + HetuwMod::panelOffsetX - HetuwMod::tutMessageOffsetX2;
+		}
+        mTutorialTargetOffset[i] = mTutorialHideOffset[i];
+		mTutorialTargetOffset[i].y += targetDiffY;
+        mTutorialPosOffset[i] = mTutorialHideOffset[i];
+        mTutorialPosOffset[i].y += posDiffY;
+
+		targetDiffY = mCravingTargetOffset[i].y - mCravingHideOffset[i].y;
+		posDiffY = mCravingPosOffset[i].y - mCravingHideOffset[i].y;
+        mCravingHideOffset[i].x = -932 - HetuwMod::panelOffsetX;
+        mCravingHideOffset[i].y = -370 - HetuwMod::panelOffsetY;
+        mCravingTargetOffset[i] = mCravingHideOffset[i];
+		mCravingTargetOffset[i].y += targetDiffY;
+        mCravingPosOffset[i] = mCravingHideOffset[i];
+		mCravingPosOffset[i].y += posDiffY;
+	}
+}
 
 
 
