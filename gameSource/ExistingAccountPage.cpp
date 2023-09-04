@@ -51,7 +51,7 @@ ExistingAccountPage::ExistingAccountPage()
                      translate( "accountKey" ),
                      // allow only ticket code characters
                      "23456789ABCDEFGHJKLMNPQRSTUVWXYZ-" ),
-          mAtSignButton( mainFont, 252, 128, "@" ),
+          mAtSignButton( mainFont, 100, 68, "@" ),
           mPasteButton( mainFont, 0, -60, translate( "paste" ), 'v', 'V' ),
           mPasteEmailButton( mainFont, 0, 68, translate( "paste" ), 'v', 'V' ),
           mDisableCustomServerButton( mainFont, 0, 220, 
@@ -74,20 +74,12 @@ ExistingAccountPage::ExistingAccountPage()
           mViewAccountButton( mainFont, 0, 64, translate( "view" ) ),
           mTutorialButton( mainFont, 522, 300, 
                            translate( "tutorial" ) ),
+          mServicesButton( mainFont, -522, 300, 
+                           translate( "services" ) ),
           mPageActiveStartTime( 0 ),
           mFramesCounted( 0 ),
           mFPSMeasureDone( false ),
           mHideAccount( false ) {
-    
-    
-    // center this in free space
-    /*
-    mPasteButton.setPosition( ( 333 + mKeyField.getRightEdgeX() ) / 2,
-                              -64 );
-    */
-    // align this one with the paste button
-    mAtSignButton.setPosition( mEmailField.getRightEdgeX() + 48,
-                               128 );
     
     
     if( userEmail != NULL && accountKey != NULL ) {
@@ -111,6 +103,7 @@ ExistingAccountPage::ExistingAccountPage()
     setButtonStyle( &mRedetectButton );
     setButtonStyle( &mViewAccountButton );
     setButtonStyle( &mTutorialButton );
+    setButtonStyle( &mServicesButton );
 
     setButtonStyle( &mDisableCustomServerButton );
     
@@ -138,6 +131,7 @@ ExistingAccountPage::ExistingAccountPage()
 
     addComponent( &mViewAccountButton );
     addComponent( &mTutorialButton );
+    addComponent( &mServicesButton );
     
     mLoginButton.addActionListener( this );
     mFriendsButton.addActionListener( this );
@@ -159,6 +153,7 @@ ExistingAccountPage::ExistingAccountPage()
 
     mViewAccountButton.addActionListener( this );
     mTutorialButton.addActionListener( this );
+    mServicesButton.addActionListener( this );
     
     mDisableCustomServerButton.addActionListener( this );
 
@@ -379,6 +374,9 @@ void ExistingAccountPage::actionPerformed( GUIComponent *inTarget ) {
         }
     else if( inTarget == &mTutorialButton ) {
         processLogin( true, "tutorial" );
+        }
+    else if( inTarget == &mServicesButton ) {
+        setSignal( "services" );
         }
     else if( inTarget == &mClearAccountButton ) {
         SettingsManager::setSetting( "email", "" );
@@ -660,7 +658,7 @@ void ExistingAccountPage::draw( doublePair inViewCenter,
                 setStatusDirect( message, true );
                 delete [] message;
 
-                setStatusPositiion( true );
+                setStatusPosition( true );
                 mRetryButton.setVisible( true );
                 mRedetectButton.setVisible( true );
                 }
@@ -768,6 +766,13 @@ void ExistingAccountPage::draw( doublePair inViewCenter,
         if( isFitnessScoreReady() ) {
             mGenesButton.setVisible( true );
             }
+
+        // YumLife: show window title with version info
+        pos = mServicesButton.getPosition();
+        pos.y += 35;
+        pos.x = 0;
+        setDrawColor( 1, 1, 1, 1.0 );
+        mainFont->drawString( getWindowTitle(), pos, alignCenter );
         }
     }
 

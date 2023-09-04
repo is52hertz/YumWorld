@@ -945,7 +945,67 @@ static void setupGiveClue( ObjectRecord *inR ) {
         inR->giveClue = true;
         }
     }
+
+
+static void setupNearPop( ObjectRecord *inR ) {
+    inR->nearPop = false;    
+    inR->nearPopFraction = 0;
+    inR->nearPopDistance = 0;
     
+
+    char *pos = strstr( inR->description, "+nearPop" );
+
+    if( pos != NULL ) {
+        
+        int readPercent;
+        
+        int numRead = sscanf( pos, "+nearPop_%d_%d", &( readPercent ),
+                              &( inR->nearPopDistance ) );
+
+        if( numRead == 2 && inR->nearPopDistance > 0 &&
+            readPercent >= 0 && readPercent <= 100 ) {
+            
+            inR->nearPop = true;
+            inR->nearPopFraction = readPercent / 100.0f;
+            }
+        }
+    }
+    
+
+
+static void setupContainOffset( ObjectRecord *inR ) {
+    inR->containOffsetX = 0;
+    inR->containOffsetY = 0;
+    inR->containOffsetBottomX = 0;
+    inR->containOffsetBottomY = 0;
+    
+    char *pos = strstr( inR->description, "+containOffsetX_" );
+
+    if( pos != NULL ) {
+        sscanf( pos, "+containOffsetX_%d", &( inR->containOffsetX ) );
+        }
+
+    pos = strstr( inR->description, "+containOffsetY_" );
+
+    if( pos != NULL ) {
+        sscanf( pos, "+containOffsetY_%d", &( inR->containOffsetY ) );
+        }
+
+    pos = strstr( inR->description, "+containOffsetBottomX_" );
+
+    if( pos != NULL ) {
+        sscanf( pos, "+containOffsetBottomX_%d", 
+                &( inR->containOffsetBottomX ) );
+        }
+
+    pos = strstr( inR->description, "+containOffsetBottomY_" );
+
+    if( pos != NULL ) {
+        sscanf( pos, "+containOffsetBottomY_%d", 
+                &( inR->containOffsetBottomY ) );
+        }
+    }
+
 
 
 
@@ -1168,6 +1228,8 @@ float initObjectBankStep() {
                 setupHideRider( r );
                 setupNeverDrop( r );
                 setupGiveClue( r );
+                setupNearPop( r );
+                setupContainOffset( r );
                 
                 
                 r->mapChance = 0;      
@@ -2861,54 +2923,84 @@ void setupSpriteUseVis( ObjectRecord *inObject, int inUsesRemaining,
 
         int d = inUsesRemaining;
         
-        // hide some sprites
+
         
-        int numSpritesLeft = 
-            ( d * (numVanishingSprites) ) / numUses;
+        // hide some vanishing sprites
+        if( numVanishingSprites > 0 ) {
+            
+            int numSpritesLeft = 
+                ( d * (numVanishingSprites) ) / numUses;
+            
+            int numInLastDummy = numVanishingSprites / numUses;
+            
+            int numInFirstDummy = ( ( numUses - 1 ) *
+                                    numVanishingSprites ) / numUses;
+            
+            if( numInLastDummy == 0 ) {
+                // add 1 to everything to pad up, so last
+                // dummy has 1 sprite in it
+                numSpritesLeft += 1;
+                
+                numInFirstDummy += 1;
+                }
+
+            if( numSpritesLeft > numVanishingSprites ) {
+                numSpritesLeft = numVanishingSprites;
+                }
+            if( numInFirstDummy > numVanishingSprites ) {
+                numInFirstDummy = numVanishingSprites;
+                }
         
-        int numInLastDummy = numVanishingSprites / numUses;
+
+            if( numInFirstDummy == numVanishingSprites ) {
+                // no change between full object and first dummy (between full
+                // and one less than full)
+                
+                // Need a visual change here too
+                
+                // pull all the non-1-sprite phases down
+                // this ensures that none of them look like the full object
+                if( numSpritesLeft > 1 ) {
+                    numSpritesLeft --;
+                    }
+                }        
+            
+            
+            for( int v=numSpritesLeft; v<numVanishingSprites; v++ ) {
+                
+                inSpriteSkipDrawing[ vanishingIndices.getElementDirect( v ) ] = 
+                    true;
+                }
+            }
         
-        if( numInLastDummy == 0 ) {
+
+
+        // now handle appearing sprites
+        if( numAppearingSprites > 0 ) {
+            
+            int numInvisSpritesLeft = 
+                lrint( ( d * (numAppearingSprites) ) / (double)numUses );
+            
+            /*
+            // testing... do we need to do this?
+            int numInvisInLastDummy = numAppearingSprites / numUses;
+            
+            if( numInLastDummy == 0 ) {
             // add 1 to everything to pad up, so last
             // dummy has 1 sprite in it
             numSpritesLeft += 1;
             }
-                        
-
-        if( numSpritesLeft > numVanishingSprites ) {
-            numSpritesLeft = numVanishingSprites;
-            }
-
-        for( int v=numSpritesLeft; v<numVanishingSprites; v++ ) {
-            
-            inSpriteSkipDrawing[ vanishingIndices.getElementDirect( v ) ] = 
-                true;
-            }
-
-
-        // now handle appearing sprites
-        int numInvisSpritesLeft = 
-            lrint( ( d * (numAppearingSprites) ) / (double)numUses );
-                        
-        /*
-        // testing... do we need to do this?
-        int numInvisInLastDummy = numAppearingSprites / numUses;
+            */
         
-        if( numInLastDummy == 0 ) {
-        // add 1 to everything to pad up, so last
-        // dummy has 1 sprite in it
-        numSpritesLeft += 1;
-        }
-        */
-        
-        if( numInvisSpritesLeft > numAppearingSprites ) {
-            numInvisSpritesLeft = numAppearingSprites;
-            }
-
-        for( int v=0; v<numAppearingSprites - numInvisSpritesLeft; v++ ) {
+            if( numInvisSpritesLeft > numAppearingSprites ) {
+                numInvisSpritesLeft = numAppearingSprites;
+                }
             
-            inSpriteSkipDrawing[ appearingIndices.getElementDirect( v ) ] = 
-                false;
+            for( int v=0; v<numAppearingSprites - numInvisSpritesLeft; v++ ) {
+                
+                inSpriteSkipDrawing[ appearingIndices.getElementDirect( v ) ] = 
+                    false;
+                }
             }
         }
     }
@@ -4117,7 +4209,8 @@ int addObject( const char *inDescription,
     setupHideRider( r );
     setupNeverDrop( r );
     setupGiveClue( r );
-    
+    setupNearPop( r );
+    setupContainOffset( r );
     
     r->toolSetIndex = -1;
     
@@ -6286,7 +6379,8 @@ doublePair getObjectCenterOffset( ObjectRecord *inObject ) {
     
 
     if( widestRecord == NULL ) {
-        doublePair result = { 0, 0 };
+        doublePair result = { (double) inObject->containOffsetX, 
+                              (double) inObject->containOffsetY };
         return result;
         }
     
@@ -6300,6 +6394,9 @@ doublePair getObjectCenterOffset( ObjectRecord *inObject ) {
 
     doublePair spriteCenter = add( inObject->spritePos[widestIndex], 
                                    centerOffset );
+
+    spriteCenter.x += inObject->containOffsetX;
+    spriteCenter.y += inObject->containOffsetY;
 
     return spriteCenter;
     
@@ -6347,7 +6444,8 @@ doublePair getObjectBottomCenterOffset( ObjectRecord *inObject ) {
     
 
     if( lowestRecord == NULL ) {
-        doublePair result = { 0, 0 };
+        doublePair result = { (double) inObject->containOffsetBottomX, 
+                              (double) inObject->containOffsetBottomY };
         return result;
         }
     
@@ -6369,6 +6467,9 @@ doublePair getObjectBottomCenterOffset( ObjectRecord *inObject ) {
     // but keep center from widest sprite
     // (in case object has "feet" that are not centered)
     wideCenter.y = spriteCenter.y;
+
+    wideCenter.x += inObject->containOffsetBottomX;
+    wideCenter.y += inObject->containOffsetBottomY;
 
     return wideCenter;    
     }

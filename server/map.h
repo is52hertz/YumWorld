@@ -60,7 +60,10 @@ void resetEveRadius();
 // gets new Eve position on outskirts of civilization
 // if inAllowRespawn, this player's last Eve old-age-death will be
 // considered.
-void getEvePosition( const char *inEmail, int inID, int *outX, int *outY,
+//
+// Returns true if this is an Eve respawning in their own camp
+// (low-pop solo server mode)
+char getEvePosition( const char *inEmail, int inID, int *outX, int *outY,
                      SimpleVector<GridPos> *inOtherPeoplePos,
                      char inAllowRespawn = true,
                      // true if we should increment position for advancing
@@ -279,7 +282,9 @@ int addMetadata( int inObjectID, unsigned char *inBuffer );
 
 // gets speech pipe indices for IN pipes at or adjacent to inX,inY
 // vector passed in through outIndicies will be filled with indices
-void getSpeechPipesIn( int inX, int inY, SimpleVector<int> *outIndicies );
+void getSpeechPipesIn( int inX, int inY, 
+                       SimpleVector<int> *outIndicies,
+                       SimpleVector<GridPos> *outPositions );
 
 
 // returned vector NOT destroyed or modified by caller

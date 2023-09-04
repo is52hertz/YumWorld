@@ -2,11 +2,10 @@
 #define HETUWMOD_H
 
 #define hetuwWaitingText "press %c in game for help"
-#define hetuwSettingsFileName "hetuw.cfg"
-#define hetuwLogFileName "hetuwlog.txt"
+#define hetuwSettingsFileName "yumlife.cfg"
+#define hetuwLogFileName "yumlog.txt"
 #define hetuwLogSeperator " | " // needs to be 3 char long
 #define hetuwFakeCoord 1977
-#define hetuwBitcoinWallet "bc1q66jzg06xxd8uup0svwhhwum23d3mqlrnsccf2j" // donate something :)  (this donates to hetuw, not selb/YumLife, to be clear)
 #define hetuwGetNewestVersionFromGithub "get newest version from github https://github.com/selb/YumLife/releases"
 #define hetuwPhotoSize 400
 
@@ -15,6 +14,7 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 
 #include "LivingLifePage.h"
 #include "hetuwFont.h"
@@ -276,6 +276,7 @@ public:
 	static constexpr int OBJID_Fire = 82;
 	static constexpr int OBJID_HotCoals = 85;
 	static constexpr int OBJID_ClayBowl = 235;
+	static constexpr int OBJID_ClayPlate = 236;
 	static constexpr int OBJID_HotAdobeOven = 250;
 
 	static constexpr int OBJID_BellTowerSound = 839;
@@ -292,9 +293,6 @@ public:
 	static constexpr int spriteBodyWhiteID = 53;
 
 	static int maxObjects;
-
-	static int dangerousAnimalsLength;
-	static int* dangerousAnimals;
 
 	static int closedDoorIDsLength;
 	static int* closedDoorIDs;
@@ -447,6 +445,7 @@ public:
 	
 	static void actionAlphaRelativeToMe( int x, int y );
 	static void actionBetaRelativeToMe( int x, int y );
+	static void actionGammaRelativeToMe( int x, int y );
 
 	static void setOurSendPosXY(int &x, int &y);
 	static void useBackpack(bool replace=false);
@@ -538,6 +537,7 @@ public:
 	static void onOurDeath();
 	static void onPlayerUpdate( LiveObject* o, const char* line );
 	static void onNameUpdate(LiveObject* o);
+	static void onCurseUpdate(LiveObject* o);
 	static void removeLastName(char *newName, const char* name );
 	static void getLastName( char* lastName, const char* name );
 	static void setLastNameColor( const char* lastName, float alpha );
@@ -581,6 +581,8 @@ public:
 	static bool bxRay;
 	static bool bHidePlayers;
 	static char ourGender;
+	static bool bRemapStart;
+	static bool bDrawHungerWarning;
 
 	static bool bFoundFamilyName;
 	static std::vector<FamilyInRange*> familiesInRange;
@@ -697,6 +699,7 @@ private:
 	
 	static void initDangerousAnimals();
 	static void initClosedDoorIDs();
+	static void writeSettings(ofstream &);
 	static void initSettings();
 
 	static void move(); // called only once on frame - dont use
@@ -797,6 +800,8 @@ private:
 	static void drawBiomeIDs();
 
 	static void initCustomFont();
+
+	static void drawHungerWarning();
 };
 
 

@@ -18,6 +18,7 @@
 #include "emotion.h"
 
 #include "photos.h"
+#include "photoCache.h"
 
 #include "spriteDrawColorOverride.h"
 
@@ -174,6 +175,7 @@ static char vogPickerOn = false;
 bool LivingLifePage::hetuwIsVogMode() { return vogMode; }
 doublePair LivingLifePage::hetuwGetVogPos() { return vogPos; }
     
+int LivingLifePage::hetuwGetYumBonus() { return mYumBonus; }
 
 extern float musicLoudness;
 
@@ -220,6 +222,9 @@ static char takingPhotoFlip = false;
 static int photoSequenceNumber = -1;
 static char waitingForPhotoSig = false;
 static char *photoSig = NULL;
+static char waitingForPhotoID = false;
+
+
 
 void LivingLifePage::hetuwSetTakingPhoto(bool b) { takingPhoto = b; }
 
@@ -1110,6 +1115,12 @@ void LivingLifePage::sendToServerSocket( char *inMessage ) {
     timeLastMessageSent = game_getCurrentTime();
     
     printf( "Sending message to server: %s\n", inMessage );
+
+    if( mServerSocket == -1 ) {
+        printf( "Server socket already closed, skipping sending message: %s\n",
+                inMessage );
+        return;
+        }
     
     replaceLastMessageSent( stringDuplicate( inMessage ) );    
 
@@ -3016,6 +3027,8 @@ LivingLifePage::LivingLifePage()
     
     for( int i=0; i<2; i++ ) {
         mCurrentHintTargetObject[i] = 0;
+        mCurrentHintTargetObjectFull[i] = false;
+
         mCurrentHintTargetPointerBounce[i] = 0;
         mCurrentHintTargetPointerFade[i] = 0;
         
@@ -3184,7 +3197,28 @@ LivingLifePage::LivingLifePage()
         
         mLineSegmentSprite = loadWhiteSprite( "lineSegment.tga" );
         }
-          
+         
+
+
+    for( int i=0; i<NUM_HINT_SHEETS; i++ ) {
+        char *name = autoSprintf( "photoDisplay%d.tga", i + 1 );    
+        mPhotoDisplaySprites[i] = loadSprite( name, false );
+        delete [] name;
+        
+        mPhotoToShowIDs[i] = NULL;
+        mPhotoToShowAreNegative[i] = false;
+        
+        mPhotoToShowSprites[i] = NULL;
+    
+        // offset separate pages in x direction slightly
+        mPhotoDisplayHideOffset[i].x = 430 - i * 10;
+        mPhotoDisplayHideOffset[i].y = 360 + 200;
+        
+        mPhotoDisplayPosOffset[i] = mPhotoDisplayHideOffset[i];
+        mPhotoDisplayPosTargetOffset[i] = mPhotoDisplayHideOffset[i];
+        }
+    mLivePhotoSheetIndex = 0;
+    
     
     int tutorialDone = SettingsManager::getIntSetting( "tutorialDone", 0 );
     
@@ -3301,6 +3335,7 @@ LivingLifePage::~LivingLifePage() {
     
     if( mServerSocket != -1 ) {
         closeSocket( mServerSocket );
+        mServerSocket = -1;
         }
     
     for( int j=0; j<2; j++ ) {
@@ -3393,7 +3428,22 @@ LivingLifePage::~LivingLifePage() {
         freeSprite( mTeaserArrowVeryShortSprite );
         freeSprite( mLineSegmentSprite );
         }
+
     
+    for( int i=0; i<NUM_HINT_SHEETS; i++ ) {
+        freeSprite( mPhotoDisplaySprites[i] );
+
+        if( mPhotoToShowIDs[i] != NULL ) {
+            delete [] mPhotoToShowIDs[i];
+            }
+        
+        if( mPhotoToShowSprites[i] != NULL ) {
+            freeSprite( mPhotoToShowSprites[i] );
+            mPhotoToShowSprites[i] = NULL;
+            }
+        }
+    
+
     for( int i=0; i<4; i++ ) {
         freeSprite( mGroundOverlaySprite[i] );
         }
@@ -7295,6 +7345,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
           mCurrentHintTargetObject[1] > 0 ) ) {
 
         int actualWatchTargets[2] = { 0, 0 };
+        char actualWatchTargetsFull[2] = { false, false };
         
         int heldID = getObjectParent( ourLiveObject->holdingID );            
 
@@ -7353,12 +7404,16 @@ void LivingLifePage::draw( doublePair inViewCenter,
                 
                 if( forceShow || heldID != mCurrentHintTargetObject[i] ) {
                     actualWatchTargets[i] = mCurrentHintTargetObject[i];
+                    actualWatchTargetsFull[i] = 
+                        mCurrentHintTargetObjectFull[i];
+                    
                     }
                 }
             }
         
         
         startWatchForClosestObjectDraw( actualWatchTargets,
+                                        actualWatchTargetsFull,
                                         mult( ourLiveObject->currentPos,
                                               CELL_D ) );
         }
@@ -9270,8 +9325,7 @@ void LivingLifePage::draw( doublePair inViewCenter,
             waitingForPhotoSig = true;
             delete [] message;
             }
-        else if( photoSig != NULL ) {
-
+        else if( photoSig != NULL && ! waitingForPhotoID ) {
 			float currentZoom = HetuwMod::zoomScale;
 			HetuwMod::setZoom( 1.0f );
 
@@ -9284,12 +9338,16 @@ void LivingLifePage::draw( doublePair inViewCenter,
             pos = mult( pos, CELL_D );
             pos = sub( pos, lastScreenViewCenter );
             
-            int screenWidth, screenHeight;
-            getScreenDimensions( &screenWidth, &screenHeight );
+            // pos is currently in world/pixel coordinates           
             
-            pos.x += screenWidth / 2;
-            pos.y += screenHeight / 2;
-        
+            // do NOT adjust camera pos relative to screen corner yet
+            // we need to take screen scaling into acount
+            // and we don't want to recompute screen scaling here
+            // (we will do that in the photo code)
+            // pos.x += screenWidth / 2;
+            // pos.y += screenHeight / 2;
+
+
             char *ourName;
             
             if( ourLiveObject->name != NULL ) {
@@ -9352,6 +9410,38 @@ void LivingLifePage::draw( doublePair inViewCenter,
             waitingForPhotoSig = false;
 
 			HetuwMod::setZoom( currentZoom );
+            waitingForPhotoID = true;
+            }
+        else if( waitingForPhotoID ) {
+            // is our photo ID ready yet?
+            
+            char *photoID = getPostedPhotoID();
+            
+            if( photoID != NULL ) {
+                
+                // empty string means error in submitting photo
+                if( strcmp( photoID, "" ) != 0 ) {
+                    char *message = 
+                        autoSprintf( "PHOID %d %d %s#",
+                                     takingPhotoGlobalPos.x, 
+                                     takingPhotoGlobalPos.y,
+                                     photoID );
+                
+                    sendToServerSocket( message );
+                    delete [] message;
+                    }
+                
+                delete [] photoID;
+                
+
+                delete [] photoSig;
+                photoSig = NULL;
+                photoSequenceNumber = -1;
+                waitingForPhotoSig = false;
+                waitingForPhotoID = false;
+                
+                takingPhoto = false;
+                }
             }
         }
     
@@ -9867,8 +9957,26 @@ void LivingLifePage::draw( doublePair inViewCenter,
 
 
 
+    // now draw photo sheets    
+    setDrawColor( 1, 1, 1, 1 );
+    
+    for( int i=0; i<NUM_HINT_SHEETS; i++ ) {
+        if( ! equal( mPhotoDisplayPosOffset[i], mPhotoDisplayHideOffset[i] ) 
+            &&
+            mPhotoToShowSprites[i] != NULL ) {
 
+            doublePair sheetPos  = 
+                add( mPhotoDisplayPosOffset[i], lastScreenViewCenter );
 
+            drawSprite( mPhotoDisplaySprites[i], sheetPos );
+            
+            toggleMultiplicativeBlend( true );
+            
+            drawSprite( mPhotoToShowSprites[i], sheetPos );
+
+            toggleMultiplicativeBlend( false );
+            }
+        }
 
 
 
@@ -10760,18 +10868,22 @@ void LivingLifePage::draw( doublePair inViewCenter,
                             char *yearsString;
                             
                             if( years >= NUM_NUMBER_KEYS ) {
+                                // this stops behaving above 999,999,999 years
+                                // but each in-game year is 1 minute,
+                                // so this stops behaving after 1902 real-life
+                                // years.
                                 if( years > 1000000 ) {
                                     int mil = years / 1000000;
                                     int remain = years % 1000000;
                                     int thou = remain / 1000;
                                     int extra = remain % 1000;
                                     yearsString = 
-                                        autoSprintf( "%d,%d,%d", 
+                                        autoSprintf( "%d,%03d,%03d", 
                                                      mil, thou, extra );
                                     }
                                 else if( years > 1000 ) {
                                     yearsString = 
-                                        autoSprintf( "%d,%d", 
+                                        autoSprintf( "%d,%03d", 
                                                      years / 1000,
                                                      years % 1000 );
                                     }
@@ -11351,6 +11463,48 @@ static char isCategory( int inID ) {
     }
 
 
+
+// A pure pattern is a pattern object that is itself never instantiated
+// in the world and only defintes pattern-based transitions.
+// Unfortunately, there's no hard marking for these in the game data.
+//
+// Patterns started out *different* from categories, in that a master object
+// (like pink rose seeds) would serve as a pattern for other similar objects
+// And where the transitions defined for the master objects could
+// be automatically applied for the sub-objects, once the pattern was defined.
+//
+// But later on, it became convenient and more clear to set up patterns that
+// were just patterns, and not master objects that also occurred in the world.
+// For example, there are 30+ different types of bottles, and there's are
+// abstract bottle pattern objects that occur in bottle-related transitions.
+// But it's not one kind of bottle that serves as the master object for the
+// pattern.
+//
+// Currently, abstract objects (be they categories or patterns) are
+// marked in their descriptions with the @ symbol at the start.
+// 
+// We will use that here to detect them
+static char isPurePattern( int inID ) {
+    if( inID <= 0 ) {
+        return false;
+        }
+    
+    CategoryRecord *c = getCategory( inID );
+    
+    if( c == NULL ) {
+        return false;
+        }
+    if( c->isPattern && 
+        c->objectIDSet.size() > 0 &&
+        getObject( inID )->description[0] == '@' ) {
+        return true;
+        }
+    return false;
+    }
+
+
+
+
 static char isFood( int inID ) {
     if( inID <= 0 ) {
         return false;
@@ -11389,6 +11543,16 @@ char LivingLifePage::getTransHintable( TransRecord *inTrans ) {
         if( isCategory( inTrans->target ) ) {
             return false;
             }
+
+        
+        if( isPurePattern( inTrans->actor ) ) {
+            return false;
+            }
+        if( isPurePattern( inTrans->target ) ) {
+            return false;
+            }
+        
+            
         
         if( inTrans->target == -1 && inTrans->newTarget == 0 &&
             ! isFood( inTrans->actor ) ) {
@@ -11515,6 +11679,10 @@ int LivingLifePage::getNumHints( int inObjectID ) {
     
     mCurrentHintTargetObject[0] = 0;
     mCurrentHintTargetObject[1] = 0;
+
+    mCurrentHintTargetObjectFull[0] = false;
+    mCurrentHintTargetObjectFull[1] = false;
+    
 
 
     // else need to regenerated sorted list
@@ -12163,6 +12331,40 @@ static double getLongestLine( char *inMessage ) {
 
 
 
+// tags with new or fresh if needed
+// inBaseString is destroyed internally if it needs to change
+//  and a new string is returned.
+// If it doesn't need to change, inBaseString is returned directly
+static char *tagObjectStringWithQualifier( char *inBaseString,
+                                           ObjectRecord *inO ) {
+    if( inO->useChance == 1.0 ) {
+        // an object that steps through uses
+        // probably something that gets visibly used up
+        // step by step.
+        // actorMinUseFraction == 1.0 means "full"
+        char *taggedString =
+            autoSprintf( "%s %s", inBaseString,
+                         translate( "fullHint" ) );
+        delete [] inBaseString;
+        return taggedString;
+        }
+    else if( inO->useChance < 1.0 &&
+             inO->useChance > 0 ) {
+        // an object that wears out somewhat randomly
+        // actorMinUseFraction == 1.0 means "unused new object"
+        char *taggedString =
+            autoSprintf( "%s %s", inBaseString,
+                         translate( "freshHint" ) );
+        delete [] inBaseString;
+        return taggedString;
+        }
+
+    return inBaseString;
+    }
+
+
+                                           
+
 char *LivingLifePage::getHintMessage( int inObjectID, int inIndex,
                                       int inDoNotPointAtThis ) {
 
@@ -12189,8 +12391,17 @@ char *LivingLifePage::getHintMessage( int inObjectID, int inIndex,
         char *actorString;
         
         if( actor > 0 ) {
-            actorString = stringToUpperCase( getObject( actor )->description );
+            ObjectRecord *actorO = getObject( actor );
+
+            actorString = stringToUpperCase( actorO->description );
             stripDescriptionComment( actorString );
+
+            if( found->actorMinUseFraction == 1.0 &&
+                actorO->numUses > 1 ) {
+                
+                actorString = tagObjectStringWithQualifier( actorString,
+                                                            actorO );
+                }
             }
         else if( actor == 0 || actor == -2 ) {
             // show bare hand for default actions too
@@ -12209,9 +12420,18 @@ char *LivingLifePage::getHintMessage( int inObjectID, int inIndex,
         char *targetString;
         
         if( target > 0 ) {
+            ObjectRecord *targetO = getObject( target );
+
             targetString = 
-                stringToUpperCase( getObject( target )->description );
+                stringToUpperCase( targetO->description );
             stripDescriptionComment( targetString );
+            
+            if( found->targetMinUseFraction == 1.0 &&
+                targetO->numUses > 1 ) {
+                
+                targetString = tagObjectStringWithQualifier( targetString,
+                                                             targetO );
+                }
             }
         else if( target == -1 && actor > 0 ) {
             ObjectRecord *actorObj = getObject( actor );
@@ -12255,15 +12475,25 @@ char *LivingLifePage::getHintMessage( int inObjectID, int inIndex,
         mCurrentHintTargetObject[0] = 0;
         mCurrentHintTargetObject[1] = 0;
 
+        mCurrentHintTargetObjectFull[0] = false;
+        mCurrentHintTargetObjectFull[1] = false;
+
+        
         // never show visual pointer toward what we're holding
         // we handle this elsewhere too, so just obey inDoNotPoint here
         if( target > 0 && 
             target != inDoNotPointAtThis ) {
             mCurrentHintTargetObject[1] = target;
+
+            mCurrentHintTargetObjectFull[1] = 
+                ( found->targetMinUseFraction == 1.0 );
             }
         if( actor > 0 &&
                  actor != inDoNotPointAtThis ) {
             mCurrentHintTargetObject[0] = actor;
+
+            mCurrentHintTargetObjectFull[0] = 
+                ( found->actorMinUseFraction == 1.0 );
             }
         
         if( actor > 0 && target > 0 &&
@@ -12272,6 +12502,11 @@ char *LivingLifePage::getHintMessage( int inObjectID, int inIndex,
             // show pointer to ones that are on the ground
             mCurrentHintTargetObject[0] = actor;
             mCurrentHintTargetObject[1] = 0;
+
+            mCurrentHintTargetObjectFull[0] = 
+                ( found->actorMinUseFraction == 1.0 );
+            
+            mCurrentHintTargetObjectFull[1] = false;
             }
         else if( actor == 0 && target > 0 && 
                  target != inDoNotPointAtThis ) {
@@ -12279,6 +12514,11 @@ char *LivingLifePage::getHintMessage( int inObjectID, int inIndex,
             // show target even if it matches what we're giving hints about
             mCurrentHintTargetObject[0] = target;
             mCurrentHintTargetObject[1] = 0;
+            
+            mCurrentHintTargetObjectFull[0] = 
+                ( found->targetMinUseFraction == 1.0 );
+            
+            mCurrentHintTargetObjectFull[1] = false;
             }
         
         
@@ -12624,6 +12864,58 @@ void LivingLifePage::setNewCraving( int inFoodID, int inYumBonus ) {
 
 
 
+void LivingLifePage::displayPhoto( const char *inPhotoID, char inNegative ) {
+    
+    if( strlen( inPhotoID ) != 40 ) {
+        printf( "Bad photo_id received from server in *photo metadata: %s\n",
+                inPhotoID );
+        return;
+        }    
+
+    if( mPhotoToShowIDs[ mLivePhotoSheetIndex ] != NULL &&
+        mPhotoToShowAreNegative[ mLivePhotoSheetIndex ] == inNegative &&
+        strcmp( inPhotoID, mPhotoToShowIDs[ mLivePhotoSheetIndex ] ) == 0 ) {
+        // currently showing this photo
+        // don't re-show it
+        return;
+        }
+    
+    
+    // use next sheet
+    mLivePhotoSheetIndex ++;
+    
+    if( mLivePhotoSheetIndex >= NUM_HINT_SHEETS ) {
+        mLivePhotoSheetIndex = 0;
+        }
+    
+
+    if( mPhotoToShowSprites[ mLivePhotoSheetIndex ] != NULL ) {
+        // currently showing a photo on a still-visible photo sheet
+
+        // skip adding another, because that will create a visual glitch
+        
+        // if the user is picking up photos that quickly, it's okay
+        // if they miss seeing one
+
+        printf( "User swapped viewed photos too quickly, had to skip one\n" );
+        return;
+        }
+
+    if( mPhotoToShowIDs[ mLivePhotoSheetIndex ] != NULL ) {
+        // ID already set, but not showing yet.
+        // cache must still be fetching it.
+        // okay to replace it now
+        delete [] mPhotoToShowIDs[ mLivePhotoSheetIndex ];
+        mPhotoToShowIDs[ mLivePhotoSheetIndex ] = NULL;
+        }
+    
+    // this kicks off the process of loading it from the cache
+    mPhotoToShowIDs[ mLivePhotoSheetIndex ] = stringDuplicate( inPhotoID );
+    mPhotoToShowAreNegative[ mLivePhotoSheetIndex ] = inNegative;
+    }
+
+
+
 // color list from here:
 // https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
 
@@ -12847,6 +13139,89 @@ void LivingLifePage::step() {
         }
     
 
+    for( int i=0; i<NUM_HINT_SHEETS; i++ ) {
+
+        if( mPhotoToShowIDs[i] != NULL &&
+            mPhotoToShowSprites[i] == NULL ) {
+            
+            // see if it's ready from cache
+            mPhotoToShowSprites[i] = 
+                getCachedPhoto( mPhotoToShowIDs[i],
+                                mPhotoToShowAreNegative[i] );
+
+            if( mPhotoToShowSprites[i] != NULL ) {
+                // got it for first time from cache
+                // start timing display now
+                mPhotoDisplayStartTime[i] = game_getCurrentTime();
+                }
+            }
+                                                     
+        if( mPhotoToShowSprites[i] != NULL ) {
+            // we have a photo to show
+
+            if( mLivePhotoSheetIndex != i ||
+                game_getCurrentTime() - mPhotoDisplayStartTime[i] > 10 ) {
+                
+                // shown long enough, or we've moved on, hide photo slip
+                mPhotoDisplayPosTargetOffset[i] = mPhotoDisplayHideOffset[i];
+            
+                if( mPhotoDisplayPosOffset[i].y == 
+                    mPhotoDisplayHideOffset[i].y ) {
+                    // done hiding
+
+                    freeSprite( mPhotoToShowSprites[i] );
+                    mPhotoToShowSprites[i] = NULL;
+                    
+                    delete [] mPhotoToShowIDs[i];
+                    mPhotoToShowIDs[i] = NULL;
+                    }
+                }
+            else {
+                // keep showing it
+                mPhotoDisplayPosTargetOffset[i].y = 
+                    mPhotoDisplayHideOffset[i].y - 400;
+                }
+            
+            
+            // update positions
+            doublePair delta = 
+                sub( mPhotoDisplayPosTargetOffset[i], 
+                     mPhotoDisplayPosOffset[i] );
+            
+            double d = 
+                distance( mPhotoDisplayPosTargetOffset[i], 
+                          mPhotoDisplayPosOffset[i] );
+            
+            
+            if( d <= 1 ) {
+                mPhotoDisplayPosOffset[i] = mPhotoDisplayPosTargetOffset[i];
+                }
+            else {
+                int speed = frameRateFactor * 4;
+                
+                if( d < 8 ) {
+                    speed = lrint( frameRateFactor * d / 2 );
+                    }
+                
+                if( speed > d ) {
+                    speed = floor( d );
+                    }
+            
+                if( speed < 1 ) {
+                    speed = 1;
+                }
+                
+                doublePair dir = normalize( delta );
+                
+                mPhotoDisplayPosOffset[i] = 
+                    add( mPhotoDisplayPosOffset[i],
+                         mult( dir, speed ) );
+                }
+            
+            }
+        }
+    
+        
     // move moving objects
     int numCells = mMapD * mMapD;
     
@@ -13346,6 +13721,9 @@ void LivingLifePage::step() {
                 // hide pointer until they start tabbing again
                 mCurrentHintTargetObject[0] = 0;
                 mCurrentHintTargetObject[1] = 0;
+                
+                mCurrentHintTargetObjectFull[0] = false;
+                mCurrentHintTargetObjectFull[1] = false;
                 }
             
 
@@ -13372,9 +13750,13 @@ void LivingLifePage::step() {
                 
                 if( t->actor != heldID ) {
                     mCurrentHintTargetObject[0] = t->actor;
+                    mCurrentHintTargetObjectFull[0] =
+                        ( t->actorMinUseFraction == 1.0 ); 
                     }
                 if( t->target != heldID ) {
                     mCurrentHintTargetObject[1] = t->target;
+                    mCurrentHintTargetObjectFull[1] =
+                        ( t->targetMinUseFraction == 1.0 ); 
                     }
                 }
             }
@@ -15975,8 +16357,10 @@ void LivingLifePage::step() {
                             // floor changed
                             
                             ObjectRecord *obj = getObject( floorID );
-                            if( obj->creationSound.numSubSounds > 0 ) {    
-                                    
+                            if( obj->creationSound.numSubSounds > 0 &&
+                                shouldCreationSoundPlay( oldFloor, 
+                                                         floorID ) ) {    
+                                
                                 playSound( obj->creationSound,
                                            getVectorFromCamera( x, y ) );
                                 }
@@ -17376,7 +17760,8 @@ void LivingLifePage::step() {
                                 otherSoundPlayed = true;
                                 }
                             if( strstr( ateObj->description, "remapStart" )
-                                != NULL ) {
+                                != NULL &&
+                                HetuwMod::bRemapStart ) {
                                 
                                 if( mRemapPeak == 0 ) {
                                     // reseed
@@ -19795,6 +20180,53 @@ void LivingLifePage::step() {
                                                 newSpeech;
                                             }
                                         }
+                                    else {
+                                        // no *map metadata in our speech
+
+                                        // look for *photo metadata
+                                        starPos = 
+                                            strstr( existing->currentSpeech,
+                                                    " *photo " );
+                                    
+                                        if( starPos != NULL ) {
+                                            
+                                            if( existing->holdingID > 0 ) {
+                                                ObjectRecord *held = 
+                                                    getObject( 
+                                                        existing->holdingID );
+
+                                                char visibleNegative = false;
+                                                char visiblePositive = false;
+                                                
+                                                if( strstr( 
+                                                    held->description,
+                                                    "+negativePhotoFixed" ) ) {
+                                                    visibleNegative = true;
+                                                    }
+                                                else if( strstr( 
+                                                    held->description,
+                                                    "+positivePhotoFixed" ) ) {
+                                                    visiblePositive = true;
+                                                    }
+                                                
+                                                if( visibleNegative || 
+                                                    visiblePositive ) {
+
+                                                    // skip it to find photo_id
+                                                    char *photoID = 
+                                                        &( starPos[8] );
+                                                    
+                                                    displayPhoto( 
+                                                        photoID,
+                                                        visibleNegative );
+                                                    }
+                                                }
+                                            
+                                            // strip metadata off for 
+                                            // spoken words
+                                            starPos[0] = '\0';
+                                            }
+                                        }
                                     }
                                 }
                             
@@ -20202,6 +20634,7 @@ void LivingLifePage::step() {
                                     existing->lastCurseTagDisplayTime = curTime;
                                     existing->speechIsOverheadLabel = false;
                                     }
+                                HetuwMod::onCurseUpdate(existing);
                                 }
                             break;
                             }
@@ -22352,6 +22785,9 @@ void LivingLifePage::makeActive( char inFresh ) {
     mCurrentHintTargetObject[0] = 0;
     mCurrentHintTargetObject[1] = 0;
     
+    mCurrentHintTargetObjectFull[0] = false;
+    mCurrentHintTargetObjectFull[1] = false;
+
     
     offScreenSounds.deleteAll();
     
@@ -22366,6 +22802,8 @@ void LivingLifePage::makeActive( char inFresh ) {
 	HetuwMod::setTakingPhoto(takingPhoto);
     photoSequenceNumber = -1;
     waitingForPhotoSig = false;
+    waitingForPhotoID = false;
+    
     if( photoSig != NULL ) {
         delete [] photoSig;
         photoSig = NULL;
@@ -24779,8 +25217,22 @@ void LivingLifePage::pointerDown( float inX, float inY ) {
             else if( modClick && destID == 0 ) {
                 
                 if( ourLiveObject->holdingID != 0 ) {
-                    action = "DROP";
-                    nextActionDropping = true;
+
+                    if( destObjInClickedTile != 0 ) {
+                        action = "SWAP";
+                        nextActionDropping = false;
+                        }
+                    else {
+                        // just plain drop
+                        // Note that DROP and SWAP do the same thing server-side
+                        // when the target tile contains a non-container
+                        // object, so we could use SWAP in all cases.
+                        // However, keep DROP for case of actually clicking
+                        // an empty tile, just for clarity.
+                        action = "DROP";
+                        nextActionDropping = true;
+                        }
+                        
                     }
                 else {
                     action = "USE";
@@ -25473,8 +25925,8 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
 	}
 	if (!vogMode) {
 		if (Phex::hasFocus && mSayField.isFocused()) mSayField.unfocusAll();
-		if (HetuwMod::livingLifeKeyDown(inASCII)) return;
-		if (minitech::livingLifeKeyDown(inASCII)) return;
+		if (HetuwMod::livingLifeKeyDown(inASCII) && inASCII != 'z') return;
+		if (minitech::livingLifeKeyDown(inASCII) && inASCII != 'z') return;
 	}
 
     switch( inASCII ) {
@@ -25574,7 +26026,7 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
                 setSignal( "twinCancel" );
                 }
             else if( ! mSayField.isFocused() ) {
-                mXKeyDown = false; // hetuw mod disable click through player function - confuses people
+                mXKeyDown = true;
                 }
             break;
         /*
@@ -25969,6 +26421,10 @@ void LivingLifePage::keyDown( unsigned char inASCII ) {
                             else if( commandTyped( typedText, 
                                                    "propertyCommand" ) ) {
                                 sendToServerSocket( (char*)"PROP 0 0#" );
+                                }
+                            else if( commandTyped( typedText, 
+                                                   "orderCommand" ) ) {
+                                sendToServerSocket( (char*)"ORDR 0 0#" );
                                 }
                             else {
                                 // filter hints

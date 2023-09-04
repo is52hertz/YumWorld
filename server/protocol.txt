@@ -1086,6 +1086,7 @@ UBABY x y i id#
 REMV x y i#
 SREMV x y c i#
 DROP x y c#
+SWAP x y#
 KILL x y#
 KILL x y id#
 JUMP x y#
@@ -1103,9 +1104,11 @@ VOGI x y id#
 VOGT x y text# 
 VOGX x y#
 PHOTO x y seq#
+PHOID x y photo_id_string#
 LEAD x y#
 UNFOL x y#
 PROP x y#
+ORDR x y#
 FLIP x y#
 
 KA   is a keep-alive message used to keep the connection alive when the client
@@ -1119,6 +1122,17 @@ DROP is for setting held object down on empty grid square OR
      c is -1 except when adding something to own clothing, then c
      indicates clothing with:
      0=hat, 1=tunic, 2=frontShoe, 3=backShoe, 4=bottom, 5=backpack
+
+SWAP is for swapping held object with what's on the ground.
+     DROP is sent when the user mod-clicks directly on an object on the ground,
+     and this can result in an implicit swap.
+	 However, iF the object on the ground is a container, DROP will cause the
+     held object to be swapped with what's in the container (or added to an
+     empty container).
+     SWAP allows the held object to be swapped with the container
+     itself.
+     SWAP is always used when the user ground-clicks a tile with an object
+     while holding something.
 
 USE  is for bare-hand or held-object action on target object in non-empty 
      grid square, including picking something up (if there's no bare-handed 
@@ -1208,6 +1222,9 @@ PING is used to request a PONG response fromt the server.  The x and y
 PHOTO is used to request a photo approval and signature for position
       x y and sequence number seq
 
+PHOID is used to post a photo id string for position x y
+      photo_id_string is 40 digits of lowercase ascii hex   
+
 LEAD requests the player's top leader's position as spoken map coordinates.
      x and y are ignored
 
@@ -1215,6 +1232,9 @@ UNFOL makes the player follow no one (same as saying "I FOLLOW MYSELF")
 
 PROP cycles through player's owned property positions as spoken 
      map coordinates.
+     x and y are ignored
+
+ORDR repeats display of last-heard order from this player's leader.
      x and y are ignored
 
 FLIP requests flip to player's orientation, new facing toward x y

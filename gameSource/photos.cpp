@@ -15,15 +15,26 @@
 #include "minorGems/graphics/filters/BoxBlurFilter.h"
 
 #include "hetuwmod.h"
+#include "minorGems/graphics/RGBAImage.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "stb_image_write.h"
 
 
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+
+#include "stb_image_resize.h"
+
+
 extern char *userEmail;
 extern char *serverIP;
 extern int ourID;
+
+extern double viewWidth;
+extern double viewHeight;
+extern double visibleViewWidth;
+
 
 Image *photoBorder;
 
@@ -44,6 +55,18 @@ void initPhotos() {
 
 static int sequenceNumberWebRequest = -1;
 static int submitPhotoWebRequest = -1;
+
+static char *postedPhotoID = NULL;
+
+
+char *getPostedPhotoID() {
+    char *returnVal = postedPhotoID;
+    
+    postedPhotoID = NULL;
+
+    return returnVal;
+    }
+
 
 
 void freePhotos() {
@@ -91,15 +114,52 @@ void stepPhotos() {
             printf( "submitPhoto web request failed\n" );
             clearWebRequest( submitPhotoWebRequest );
             submitPhotoWebRequest = -1;
+            
+            if( postedPhotoID != NULL ) {
+                delete [] postedPhotoID;
+                }
+            postedPhotoID = stringDuplicate( "" );
             }
         else if( result == 1 ) {
 
             char *resultString = getWebResult( submitPhotoWebRequest );
             clearWebRequest( submitPhotoWebRequest );
-            
+            submitPhotoWebRequest = -1;
+
             if( resultString != NULL ) {
                 printf( "submitPhoto web request result:  %s\n", resultString );
+                
+                char *okayPos = strstr( resultString, "OK" );
+                if( okayPos != NULL && 
+                    strlen( okayPos ) > 3 ) {
+                    
+                    // there's stuff after OK
+                    // it is the photo ID
+
+                    // skip OK and the \n character
+                    char *photoID = &( okayPos[3] );
+
+                    printf( "submitPhoto got photo ID:  %s\n", photoID );
+                    
+                    if( postedPhotoID != NULL ) {
+                        delete [] postedPhotoID;
+                        }
+                    postedPhotoID = stringDuplicate( photoID );
+                    }
+                else {
+                    if( postedPhotoID != NULL ) {
+                        delete [] postedPhotoID;
+                        }
+                    postedPhotoID = stringDuplicate( "" );
+                    }
+                
                 delete [] resultString;
+                }
+            else {
+                if( postedPhotoID != NULL ) {
+                    delete [] postedPhotoID;
+                    }
+                postedPhotoID = stringDuplicate( "" );
                 }
             }
         // else result == 0, still waiting
@@ -161,10 +221,76 @@ static inline double intDist( int inXA, int inYA, int inXB, int inYB ) {
 
 
 
+
+static char *getJpeg64Bytes( unsigned char *inData, int inW, int inH,
+                             char *inKeyHash ) {
+    int result = stbi_write_jpg_to_func( 
+        jpegWriteFunc, NULL, 
+        inW, inH, 
+        1, inData, 90 );
+
+    if( result == 0 ) {
+        // failed to write jpg
+        return NULL;
+        }
+    
+    // success
+    // test
+    /*
+      FILE *testFile = fopen( "test.jpg", "w" );
+      for( int i=0; i<jpegBytes.size(); i++ ) {
+      fwrite( jpegBytes.getElement(i), 1, 1, testFile );
+      }
+      fclose( testFile );
+    */
+
+
+    // insert comment at end with hash value
+    // header describes length of comment (002A is 42 bytes)
+    unsigned char *commentHeader = hexDecode( (char*)"FFEE002A" );
+    
+    // the last two bytes of a JPG should be FFD9
+    // delete these for now, and add them back later
+    jpegBytes.deleteElement( jpegBytes.size() - 1 );
+    jpegBytes.deleteElement( jpegBytes.size() - 1 );
+    
+    jpegBytes.appendArray( commentHeader, 4 );
+    delete [] commentHeader;
+        
+    jpegBytes.appendArray( (unsigned char *)inKeyHash, 
+                           strlen( inKeyHash ) );
+        
+    // add jpg footer again
+    jpegBytes.push_back( 0xFF );
+    jpegBytes.push_back( 0xD9 );
+    
+    unsigned char *jpegData = jpegBytes.getElementArray();
+    
+    
+    char *jpegBase64 = 
+        base64Encode( jpegData, jpegBytes.size(), false );
+    
+    delete [] jpegData;
+    
+
+    jpegBytes.deleteAll();
+    
+    return jpegBase64;
+    }
+
+                             
+
+
+
+// inCameraLocation is in world pixels relative to screen center
+// (World pixel units assume CELL_D pixels per tile).
+// Note that world pixels may differ from screen pixels if screen
+// size does not match our native game resolution
+
 // Don't muck with this code in a way that tricks the photo server.
 // read OneLife/photoServer/protocol.txt for your very serious warning
 // about this.
-void takePhoto( doublePair inCamerLocation, int inCameraFacing,
+void takePhoto( doublePair inCameraLocation, int inCameraFacing,
                 int inSequenceNumber,
                 char *inServerSig,
                 int inAuthorID,
@@ -182,34 +308,78 @@ void takePhoto( doublePair inCamerLocation, int inCameraFacing,
     int screenWidth, screenHeight;
     getScreenDimensions( &screenWidth, &screenHeight );
         
-    int rectStartX = lrint( inCamerLocation.x );
-    if( inCameraFacing == -1 ) {
-        rectStartX -= 400 + CELL_D / 2;
+    double targetAspectRatio = visibleViewWidth / (double)viewHeight;
+    
+    double screenAspectRatio = screenWidth / (double)screenHeight;
+    
+    double screenScale;
+    
+    if( screenAspectRatio > targetAspectRatio ) {
+        screenScale = screenHeight / (double) viewHeight;
         }
     else {
-        rectStartX += CELL_D / 2;
+        screenScale = screenWidth / visibleViewWidth;
+        }
+
+    // now we can convert cam position into screen pixels, relative to center of
+    // screen
+    inCameraLocation = mult( inCameraLocation, screenScale );
+    
+    // now that it's in screen pixels, we can compute it relative to
+    // corner of screen
+    inCameraLocation.x += screenWidth / 2;
+    inCameraLocation.y += screenHeight / 2;
+
+
+    int rectStartX = lrint( inCameraLocation.x );
+    if( inCameraFacing == -1 ) {
+        rectStartX -= screenScale * ( 400 + CELL_D / 2 );
+        }
+    else {
+        rectStartX += screenScale * ( CELL_D / 2 );
         }
     if( rectStartX < 0 ) {
         rectStartX = 0;
         }
-    if( rectStartX >= screenWidth - 400 ) {
-        rectStartX = screenWidth - 401;
+    if( rectStartX >= screenWidth - screenScale * 400 ) {
+        rectStartX = screenWidth - screenScale * 400 - 1;
         }
         
-    int rectStartY = lrint( inCamerLocation.y ) - CELL_D;
+    int rectStartY = lrint( inCameraLocation.y ) - screenScale * CELL_D;
     
     if( rectStartY < 0 ) {
         rectStartY = 0;
         }
-    if( rectStartY >= screenHeight - 400 ) {
-        rectStartY = screenHeight - 401;
+    if( rectStartY >= screenHeight - screenScale * 400 ) {
+        rectStartY = screenHeight - screenScale * 400 - 1;
         }
-
+    
 	Image *im;
 	if (hetuwPhoto) {
 		im = hetuwPhoto;
 		hetuwPhoto = NULL;
-    } else im = getScreenRegionRaw( rectStartX, rectStartY, 400, 400 );
+    } else {
+    	im = getScreenRegionRaw( rectStartX, rectStartY, screenScale * 400, screenScale * 400 );
+        if( screenScale != 1.0 ) {
+            // resize the image to 400x400
+
+            unsigned char *bytes = RGBAImage::getRGBABytes( im );
+        
+            unsigned char *outBytes = new unsigned char[ 400 * 400 * 4 ];
+
+            int result = stbir_resize_uint8( bytes, 
+                                             im->getWidth(), im->getHeight(),
+                                             0, outBytes, 400, 400, 0, 4 );
+            if( result == 1 ) {
+                delete im;
+            
+                im = RGBAImage::getImageFromBytes( outBytes, 400, 400, 4 );
+            }
+
+            delete [] bytes;
+            delete [] outBytes;
+        }
+    }
     
     double *r = im->getChannel( 0 );
     double *g = im->getChannel( 1 );
@@ -322,90 +492,67 @@ void takePhoto( doublePair inCamerLocation, int inCameraFacing,
     delete blurGray;
     delete blurGrayLess;
 
+
+    // make negative too
+    Image negativeGrayIm( w, h, 1, false );
+
+    double *negativeGray = negativeGrayIm.getChannel( 0 );
+    
+    for( int p=0; p<numPix; p++ ) {
+        negativeGray[p] = 1.0 - gray[p];
+        }
+
+
     
     double *borderAlpha = photoBorder->getChannel( 3 );
 
     for( int p=0; p<numPix; p++ ) {
+        // both regular image and negative image have white borders
         gray[p] = borderAlpha[p] * 1 + (1 - borderAlpha[p]) * gray[p];
+        negativeGray[p] = borderAlpha[p] * 1 + 
+            (1 - borderAlpha[p]) * negativeGray[p];
         }
+
+    
+
+
     
     unsigned char *data = new unsigned char[ numPix ];
-    
-    int i = 0;
+    unsigned char *negativeData = new unsigned char[ numPix ];
     
     for( int p=0; p<numPix; p++ ) {
-        data[i++] = lrint( gray[p] * 255 );
-        //data[i++] = lrint( g[p] * 255 );
-        //data[i++] = lrint( b[p] * 255 );
+        data[p] = lrint( gray[p] * 255 );
+        negativeData[p] = lrint( negativeGray[p] * 255 );
         }
     
     
 
     delete im;
-    
 
-    int result = stbi_write_jpg_to_func( 
-        jpegWriteFunc, NULL, 
-        w, h, 
-        1, data, 90 );
+
+    char *seqNumberString = autoSprintf( "%d", inSequenceNumber );
+    
+    char *pureKey = getPureAccountKey();
+    
+    char *keyHash = hmac_sha1( pureKey, seqNumberString );
+    
+    delete [] seqNumberString;
+    delete [] pureKey;
+
+    
+    char *jpegBase64 = getJpeg64Bytes( data, w, h, keyHash );
+    char *negativeJpegBase64 = getJpeg64Bytes( negativeData, w, h, keyHash );
 
     delete [] data;
+    delete [] negativeData;
     
 
-    if( result == 0 ) {
+    if( jpegBase64 == NULL ||
+        negativeJpegBase64 == NULL ) {
         // error
         }
     else {
-        // success
-        // test
-        /*
-        FILE *testFile = fopen( "test.jpg", "w" );
-        for( int i=0; i<jpegBytes.size(); i++ ) {
-            fwrite( jpegBytes.getElement(i), 1, 1, testFile );
-            }
-        fclose( testFile );
-        */
         char *url = SettingsManager::getStringSetting( "photoServerURL", "" );
-        
-
-        
-        char *seqNumberString = autoSprintf( "%d", inSequenceNumber );
-
-        char *pureKey = getPureAccountKey();
-        
-        char *keyHash = hmac_sha1( pureKey, seqNumberString );
-        
-        delete [] seqNumberString;
-        delete [] pureKey;
-            
-            
-        // insert comment at end with hash value
-        // header describes length of comment (002A is 42 bytes)
-        unsigned char *commentHeader = hexDecode( (char*)"FFEE002A" );
-        
-        // the last two bytes of a JPG should be FFD9
-        // delete these for now, and add them back later
-        jpegBytes.deleteElement( jpegBytes.size() - 1 );
-        jpegBytes.deleteElement( jpegBytes.size() - 1 );
-        
-        jpegBytes.appendArray( commentHeader, 4 );
-        delete [] commentHeader;
-        
-        jpegBytes.appendArray( (unsigned char *)keyHash, 
-                               strlen( keyHash ) );
-        
-        // add jpg footer again
-        jpegBytes.push_back( 0xFF );
-        jpegBytes.push_back( 0xD9 );
-        
-        unsigned char *jpegData = jpegBytes.getElementArray();
-        
-        
-        char *jpegBase64 = 
-            base64Encode( jpegData, jpegBytes.size(), false );
-        
-        delete [] jpegData;
-
 
         char *subjectIDs;
         if( inSubjectIDs->size() == 0 ) {
@@ -445,6 +592,7 @@ void takePhoto( doublePair inCamerLocation, int inCameraFacing,
 
         
         char *jpegURL = URLUtils::urlEncode( jpegBase64 );
+        char *negativeJpegURL = URLUtils::urlEncode( negativeJpegBase64 );
         
         char *encodedEmail = URLUtils::urlEncode( userEmail );
         
@@ -460,6 +608,7 @@ void takePhoto( doublePair inCamerLocation, int inCameraFacing,
                          "&photo_author_name=%s"
                          "&photo_subjects_names=%s"
                          "&jpg_base64=%s"
+                         "&negative_jpg_base64=%s"
                          , 
                          encodedEmail,
                          inSequenceNumber,
@@ -470,11 +619,11 @@ void takePhoto( doublePair inCamerLocation, int inCameraFacing,
                          subjectIDs,
                          inAuthorName,
                          subjectNames,
-                         jpegURL
-                         );
+                         jpegURL,
+                         negativeJpegURL );
         delete [] encodedEmail;
         delete [] jpegURL;
-        delete [] keyHash;
+        delete [] negativeJpegURL;
 
         delete [] subjectIDs;
         delete [] subjectNames;
@@ -484,7 +633,6 @@ void takePhoto( doublePair inCamerLocation, int inCameraFacing,
         fprintf( bodyFile, "%s", postBody );
         fclose( bodyFile );
         */  
-        delete [] jpegBase64;
 
         submitPhotoWebRequest = startWebRequest( "POST", url, postBody );
             
@@ -493,8 +641,14 @@ void takePhoto( doublePair inCamerLocation, int inCameraFacing,
         delete [] url;
         }
     
-    jpegBytes.deleteAll();
+    if( jpegBase64 != NULL ) {
+        delete [] jpegBase64;
+        }
+    if( negativeJpegBase64 != NULL ) {
+        delete [] negativeJpegBase64;
+        }
 
     delete [] serverSig;
+    delete [] keyHash;
     }
 

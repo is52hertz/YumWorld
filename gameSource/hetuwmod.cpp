@@ -25,6 +25,7 @@ constexpr int HetuwMod::OBJID_SharpStone;
 constexpr int HetuwMod::OBJID_Fire;
 constexpr int HetuwMod::OBJID_HotCoals;
 constexpr int HetuwMod::OBJID_ClayBowl;
+constexpr int HetuwMod::OBJID_ClayPlate;
 constexpr int HetuwMod::OBJID_HotAdobeOven;
 
 int HetuwMod::maxObjects;
@@ -58,8 +59,8 @@ int HetuwMod::magnetMoveDir = -1;
 int HetuwMod::magnetWrongMoveDir = -1;
 int HetuwMod::magnetMoveCount = 0;
 
-int HetuwMod::cfgVersionNumber = 3;
-int HetuwMod::cfgVersionRead = 3;
+int HetuwMod::cfgVersionNumber = 4;
+int HetuwMod::cfgVersionRead = 4;
 
 unsigned char HetuwMod::charKey_Up;
 unsigned char HetuwMod::charKey_Down;
@@ -107,8 +108,6 @@ int HetuwMod::currentEmote = -1;
 time_t HetuwMod::lastEmoteTime;
 time_t HetuwMod::lastSpecialEmote = 0;
 
-int* HetuwMod::dangerousAnimals;
-int HetuwMod::dangerousAnimalsLength;
 bool *HetuwMod::isDangerousAnimal = NULL;
 
 int* HetuwMod::closedDoorIDs;
@@ -130,7 +129,7 @@ doublePair HetuwMod::playerNamePos;
 bool HetuwMod::bDrawCords;
 bool HetuwMod::bDrawHostileTiles = true;
 
-bool HetuwMod::bWriteLogs = false;
+bool HetuwMod::bWriteLogs = true;
 int HetuwMod::lastLoggedId = -1;
 
 double HetuwMod::curStepTime;
@@ -250,6 +249,9 @@ char *HetuwMod::serverIP = NULL;
 int HetuwMod::serverPort = 0;
 
 bool HetuwMod::addBabyCoordsToList = false;
+
+bool HetuwMod::bRemapStart = true;
+bool HetuwMod::bDrawHungerWarning = false;
 
 std::vector<HetuwMod::HttpRequest*> HetuwMod::httpRequests;
 
@@ -672,6 +674,7 @@ bool HetuwMod::strContainsDangerousAnimal(const char* str) {
 	if (strstr( str, "Skinned Wolf") != NULL) return false;
 	if (strstr( str, "Skinless Wolf") != NULL) return false;
 	if (strstr( str, "Dead Wolf") != NULL) return false;
+	if (strstr( str, "Buried Wolf") != NULL) return false;
 	if (strstr( str, "Shot Domestic Boar with Piglet") != NULL) return false;
 	if (strstr( str, "Shot Wild Boar with Piglet") != NULL) return false;
 	if (strstr( str, "Dead Grizzly Bear") != NULL) return false;
@@ -685,78 +688,24 @@ bool HetuwMod::strContainsDangerousAnimal(const char* str) {
 }
 
 void HetuwMod::initDangerousAnimals() {
-	if (dangerousAnimals != NULL) {
-		delete[] dangerousAnimals;
-		dangerousAnimals = NULL;
-	}
-
-    SimpleVector<int> vecAnimalIds;
-
-	for (int i = 0; i < maxObjects; i++) {
-		ObjectRecord* obj = getObject(i);
-		if (!obj) continue;
-		//printf("hetuw obj %i. %s\n", i, obj->description);
-		if (obj->description && strContainsDangerousAnimal(obj->description)) {
-			//printf("hetuw obj %i. %s\n", i, obj->description);
-			vecAnimalIds.push_back(i);
-		}
-	}
-
-	dangerousAnimalsLength = 6;
-	dangerousAnimals = new int[dangerousAnimalsLength];
-
-	int a = -1;
-
-	a++; dangerousAnimals[a] = 2156; // Mosquito swarm
-
-	a++; dangerousAnimals[a] = 764; // Rattle Snake
-	a++; dangerousAnimals[a] = 1385; // Attacking Rattle Snake
-
-	a++; dangerousAnimals[a] = 1789; // Abused Pit Bull
-	a++; dangerousAnimals[a] = 1747; // Mean Pit Bull
-	a++; dangerousAnimals[a] = 1712; // Attacking Pit Bull
-
-	a++;
-	if (a != dangerousAnimalsLength) {
-		printf("hetuw ERROR: a != dangerousAnimalsLength\n");
-		printf("hetuw ERROR: %i != %i\n", a, dangerousAnimalsLength);
-	}
-
-	for (int b = 0; b < dangerousAnimalsLength; b++) {
-		int animalId = dangerousAnimals[b];
-		bool exist = false;
-		for (int i = 0; i < vecAnimalIds.size(); i++) {
-			if (*(vecAnimalIds.getElement(i)) == animalId) {
-				exist = true;
-				break;
-			}
-		}
-		if (!exist) {
-			//printf("hetuw %i. %s\n", animalId, getObject(animalId)->description);
-			vecAnimalIds.push_back(animalId);
-		}
-	}
-	//printf("hetuw %i dangerous animals found\n", vecAnimalIds.size());
-
-	delete[] dangerousAnimals;
-	dangerousAnimalsLength = vecAnimalIds.size();
-	dangerousAnimals = new int[dangerousAnimalsLength];
-
-	for (int i = 0; i < vecAnimalIds.size(); i++) {
-		int k = *(vecAnimalIds.getElement(i));
-		dangerousAnimals[i] = k;
-		//printf("hetuw %i. %s\n", k, getObject(k)->description);
-	}
-
 	if (isDangerousAnimal) delete[] isDangerousAnimal;
 	isDangerousAnimal = new bool[maxObjects];
-	for (int k=0; k<maxObjects; k++) {
-		isDangerousAnimal[k] = false;
-		for (int i = 0; i < dangerousAnimalsLength; i++) {
-			if (k == dangerousAnimals[i]) {
-				isDangerousAnimal[k] = true;
-				break;
-			}
+
+	for (int i=0; i<maxObjects; i++) {
+		ObjectRecord* obj = getObject(i);
+		if (obj && obj->description && strContainsDangerousAnimal(obj->description)) {
+			isDangerousAnimal[i] = true;
+		} else if (   i == 2156 // Mosquito swarm
+		           || i == 2157 // Mosquito swarm - just bit
+		           || i == 764  // Rattle Snake
+		           || i == 1385 // Attacking Rattle Snake
+		           || i == 1789 // Abused Pit Bull
+		           || i == 1747 // Mean Pit Bull
+		           || i == 1712 // Attacking Pit Bull
+		          ) {
+			isDangerousAnimal[i] = true;
+		} else {
+			isDangerousAnimal[i] = false;
 		}
 	}
 }
@@ -908,6 +857,10 @@ bool HetuwMod::setSetting( const char* name, const char* value ) {
 		Phex::forceChannel = string(value);
 		return true;
 	}
+	if (strstr(name, "phex_send_fake_life")) {
+		Phex::bSendFakeLife = bool(value[0]-'0');
+		return true;
+	}
 	if (strstr(name, "send_keyevents")) {
 		sendKeyEvents = bool(value[0]-48);
 		return true;
@@ -977,9 +930,16 @@ bool HetuwMod::setSetting( const char* name, const char* value ) {
 		bWriteLogs = bool(value[0]-48);
 		return true;
 	}
-
 	if (strstr(name, "chat_delay")) {
 		sayDelay = stoi(value)/10.0f;
+		return true;
+	}
+	if (strstr(name, "remap_start_enabled")) {
+		bRemapStart = bool(value[0]-'0');
+		return true;
+	}
+	if (strstr(name, "draw_hunger_warning")) {
+		bDrawHungerWarning = bool(value[0]-'0');
 		return true;
 	}
 
@@ -995,43 +955,9 @@ void HetuwMod::writeCharKeyToStream( ofstream &ofs, const char* keyName, char ke
 	ofs << endl;
 }
 
-void HetuwMod::initSettings() {
-	ifstream ifs( hetuwSettingsFileName );
-	if (ifs.good()) { // file exists
-		string line;
-		while (getline(ifs, line)) {
-			//printf("hetuw read line: %s\n", line.c_str());
-			if (line.length() < 3) continue;
-			if (line[0] == '/' && line[1] == '/') continue;
-			char name[64];
-			char value[64];
-			getSettingsFileLine( name, value, line );
-			if (strlen(name) < 1) continue;
-			//printf("hetuw name: %s, value: %s\n", name, value);
-			try {
-				if (!setSetting( name, value ))
-					printf("hetuw WARNING invalid %s line: %s\n", hetuwSettingsFileName, line.c_str());
-			} catch (...) {
-				printf("hetuw WARNING %s, exception thrown at line: %s\n", hetuwSettingsFileName, line.c_str());
-			}
-		}
-	}
-	ifs.close();
-
-	if (cfgVersionRead < 2) {
-		Phex::allowServerCoords = true;
-	}
-	if (cfgVersionRead < 3) {
-		charKey_ShowDeathMessages = 254;
-	}
-
-	ofstream ofs( hetuwSettingsFileName, ofstream::out );
-
+void HetuwMod::writeSettings(ofstream &ofs) {
 	ofs << "// this file will be created whenever you start the mod" << endl;
 	ofs << "// if you want to reset this file, just delete it" << endl;
-	ofs << endl;
-	ofs << "// if you want to support me and the hetuw mod you can send bitcoin to the address below, thank you" << endl;
-	ofs << "// bitcoin address: " << hetuwBitcoinWallet << endl;
 	ofs << endl;
 
 	ofs << "cfg_version = " << cfgVersionNumber << endl;
@@ -1090,6 +1016,7 @@ void HetuwMod::initSettings() {
 	ofs << "phex_port = " << phexPort << endl;
 	ofs << "phex_coords = " << (char)(Phex::allowServerCoords+48) << endl;
 	if (Phex::forceChannel.length() > 1) ofs << "phex_channel = " << Phex::forceChannel << endl;
+	if (Phex::bSendFakeLife) ofs << "phex_send_fake_life = " << (char)(Phex::bSendFakeLife+48) << endl;
 	if (debugPhex) ofs << "phex_debug = " << (char)(debugPhex+48) << endl;
 	if (sendKeyEvents) {
 		ofs << endl;
@@ -1114,11 +1041,82 @@ void HetuwMod::initSettings() {
 	ofs << "add_baby_coords_to_list = " << (char)(addBabyCoordsToList+48) << endl;
 	ofs << endl;
 	ofs << "automatic_data_update = " << (char)(bAutoDataUpdate+48) << endl;
-	ofs << "hetuw_log = " << (char)(bWriteLogs+48) << " // will create a log file '" << hetuwLogFileName << "' which resets at the beginning of each life - logs different events" << endl;
+	ofs << "hetuw_log = " << (char)(bWriteLogs+48) << " // will create a log file '" << hetuwLogFileName << "' that logs different events" << endl;
 	ofs << endl;
 	ofs << "chat_delay = " << to_string((int)(sayDelay*10)) << " // wait atleast X time before sending the next text (10 = 1 second) - set it to 0 to deactivate it" << endl;
+	ofs << endl;
+	ofs << "remap_start_enabled = " << (char)(bRemapStart+48) << " // enable mushroom effect" << endl;
+	ofs << "draw_hunger_warning = " << (char)(bDrawHungerWarning+48) << endl;
+}
 
+void HetuwMod::initSettings() {
+	bool migrating = false;
+
+	ifstream ifs;
+	ifs.open( hetuwSettingsFileName );
+	if (!ifs.good()) {
+		// try opening an existing hetuw.cfg instead
+		migrating = true;
+		ifs.open("hetuw.cfg");
+	}
+	if (ifs.good()) { // file exists
+		string line;
+		while (getline(ifs, line)) {
+			//printf("hetuw read line: %s\n", line.c_str());
+			if (line.length() < 3) continue;
+			if (line[0] == '/' && line[1] == '/') continue;
+			char name[64];
+			char value[64];
+			getSettingsFileLine( name, value, line );
+			if (strlen(name) < 1) continue;
+			//printf("hetuw name: %s, value: %s\n", name, value);
+			try {
+				if (!setSetting( name, value ))
+					printf("hetuw WARNING invalid %s line: %s\n", hetuwSettingsFileName, line.c_str());
+			} catch (...) {
+				printf("hetuw WARNING %s, exception thrown at line: %s\n", hetuwSettingsFileName, line.c_str());
+			}
+		}
+	} else {
+		// just a new install, neither file existed
+		migrating = false;
+	}
+	ifs.close();
+
+	if (cfgVersionRead < 2) {
+		Phex::allowServerCoords = true;
+	}
+	if (cfgVersionRead < 3) {
+		charKey_ShowDeathMessages = 254;
+	}
+	if (cfgVersionRead < 4) {
+		bWriteLogs = true;
+	}
+
+	ofstream ofs( hetuwSettingsFileName, ofstream::out );
+	writeSettings(ofs);
 	ofs.close();
+
+	if (migrating) {
+		ofs.open("hetuw.cfg", ofstream::out);
+		ofs << "// +------------------------------------------------+" << endl;
+		ofs << "// | !!  WARNING: YumLife now uses yumlife.cfg.  !! |" << endl;
+		ofs << "// |                                                |" << endl;
+		ofs << "// | Changes made here will not affect YumLife.     |" << endl;
+		ofs << "// | Your settings have been preserved below in     |" << endl;
+		ofs << "// | case you need to use hetuw in the future.      |" << endl;
+		ofs << "// |                                                |" << endl;
+		ofs << "// +------------------------------------------------+" << endl;
+		for (int i = 0; i < 20; ++i) {
+			ofs << endl;
+		}
+		ofs << "// This file does not affect YumLife! Use yumlife.cfg." << endl;
+		ofs << endl;
+		writeSettings(ofs);
+		ofs << endl;
+		ofs << "// This file does not affect YumLife! Use yumlife.cfg." << endl;
+		ofs.close();
+	}
 }
 
 void HetuwMod::onGotServerAddress(char inUsingCustomServer, char *inServerIP, int inServerPort) {
@@ -1174,6 +1172,8 @@ void HetuwMod::initOnBirth() { // will be called from LivingLifePage.cpp
 	writeLineToLogs("my_birth", getTimeStamp());
 	writeLineToLogs("my_id", to_string(ourLiveObject->id));
 	writeLineToLogs("my_age", to_string((int)livingLifePage->hetuwGetAge(ourLiveObject)));
+
+	Phex::onBirth();
 }
 
 void HetuwMod::initOnServerJoin() { // will be called from LivingLifePage.cpp and hetuwmod.cpp
@@ -1335,7 +1335,7 @@ string HetuwMod::getTimeStamp(time_t t) {
 
 void HetuwMod::createNewLogFile() {
 	if (!bWriteLogs) return;
-	ofstream ofs( hetuwLogFileName, ofstream::out );
+	ofstream ofs( hetuwLogFileName, ofstream::app );
 	ofs.close();
 }
 
@@ -1964,6 +1964,7 @@ int HetuwMod::becomesFood( int objectID, int depth ) {
 
 	if (objectID == OBJID_SharpStone) return -1;
 	if (objectID == OBJID_ClayBowl) return -1;
+	if (objectID == OBJID_ClayPlate) return -1;
 	if (objectID == OBJID_HotAdobeOven) return -1;
 	if (objectID == OBJID_Fire) return -1;
 	if (objectID == OBJID_HotCoals) return -1;
@@ -2010,7 +2011,7 @@ int HetuwMod::becomesFood( int objectID, int depth ) {
 
             //int actorEdible = becomesFood( t->newActor, 0 );
             //if( actorEdible > 0 ) return actorEdible;
-			if ((t->actor <= 0 || t->actor == OBJID_ClayBowl || t->actor == OBJID_SharpStone) && t->newActor > 0) { // becomes food when using empty hand, clay bowl or sharp stone on it
+			if ((t->actor <= 0 || t->actor == OBJID_ClayBowl || t->actor == OBJID_ClayPlate || t->actor == OBJID_SharpStone) && t->newActor > 0) { // becomes food when using empty hand, clay bowl, clay plate, or sharp stone on it
 				int returnID = becomesFood(t->newActor, depth - 1);
 				if (returnID > 0) return returnID;
 				returnID = becomesFood(t->newTarget, depth - 1);
@@ -2110,6 +2111,7 @@ void HetuwMod::livingLifeDraw() {
 	}
 
 	if (bDrawBiomeInfo) drawBiomeIDs();
+	if (bDrawHungerWarning) drawHungerWarning();
 }
 
 void HetuwMod::drawCoordsHelpA() {
@@ -2998,6 +3000,18 @@ void HetuwMod::actionBetaRelativeToMe( int x, int y ) {
 	if (!remove) livingLifePage->hetuwSetNextActionDropping( true );
 }
 
+void HetuwMod::actionGammaRelativeToMe( int x, int y ) {
+	x += ourLiveObject->xd;
+	y += ourLiveObject->yd;
+
+	x = livingLifePage->sendX(x);
+	y = livingLifePage->sendY(y);
+	char msg[32];
+	sprintf( msg, "SWAP %d %d#", x, y);
+	livingLifePage->hetuwSetNextActionMessage( msg, x, y );
+	livingLifePage->hetuwSetNextActionDropping( true );
+}
+
 void HetuwMod::setOurSendPosXY(int &x, int &y) {
 	x = round( ourLiveObject->xd );
 	y = round( ourLiveObject->yd );
@@ -3191,6 +3205,8 @@ bool HetuwMod::livingLifeKeyDown(unsigned char inASCII) {
 	// player is not trying to say something
 
 	bool commandKey = isCommandKeyDown();
+	bool controlKey = isControlKeyDown();
+	bool altKey = isAltKeyDown();
 	bool shiftKey = isShiftKeyDown();
 
 	//printf("hetuw key pressed %c, value: %i, shiftKey %i, commandKey %i\n", inASCII, (int)inASCII, (int)shiftKey, (int)commandKey);
@@ -3451,9 +3467,14 @@ bool HetuwMod::livingLifeKeyDown(unsigned char inASCII) {
 		return true;
 	}
 
-	if (commandKey) {
+	if (controlKey) {
 		if (isCharKey(inASCII, charKey_TileStandingOn)) {
 			actionBetaRelativeToMe( 0, 0 );
+			return true;
+		}
+	} else if (altKey) {
+		if (isCharKey(inASCII, charKey_TileStandingOn)) {
+			actionGammaRelativeToMe( 0, 0);
 			return true;
 		}
 	} else {
@@ -3484,7 +3505,7 @@ bool HetuwMod::livingLifeKeyDown(unsigned char inASCII) {
 			stopAutoRoadRun = true;
 			return true;
 		}
-	} else if (commandKey) {
+	} else if (controlKey) {
 		if (inASCII+64 == toupper(charKey_Up)) {
 			actionBetaRelativeToMe( 0, 1 );
 			return true;
@@ -3499,6 +3520,23 @@ bool HetuwMod::livingLifeKeyDown(unsigned char inASCII) {
 		}
 		if (inASCII+64 == toupper(charKey_Right)) {
 			actionBetaRelativeToMe( 1, 0 );
+			return true;
+		}
+    } else if (altKey) {
+		if (inASCII == charKey_Up || inASCII == toupper(charKey_Up)) {
+			actionGammaRelativeToMe( 0, 1 );
+			return true;
+		}
+		if (inASCII == charKey_Left || inASCII == toupper(charKey_Left)) {
+			actionGammaRelativeToMe( -1, 0 );
+			return true;
+		}
+		if (inASCII == charKey_Down || inASCII == toupper(charKey_Down)) {
+			actionGammaRelativeToMe( 0, -1 );
+			return true;
+		}
+		if (inASCII == charKey_Right || inASCII == toupper(charKey_Right)) {
+			actionGammaRelativeToMe( 1, 0 );
 			return true;
 		}
 	} else if (shiftKey) {
@@ -3823,15 +3861,23 @@ bool HetuwMod::tileHasNoDangerousAnimals(int x, int y) {
 	int objId = livingLifePage->hetuwGetObjId( x, y);
 	if (objId <= 0) return true;
 	if (ourLiveObject->holdingID > 0 && getObject(ourLiveObject->holdingID)->rideable) {
-		if (ourLiveObject->holdingID == 2395 || // Crude Car with Empty Tank
-			ourLiveObject->holdingID == 2400 || // Crude Car with Empty Tank#driven
-			ourLiveObject->holdingID == 2396 || // Running Crude Car
-			ourLiveObject->holdingID == 2394) { // Unpowered Crude Car
+		if (ourLiveObject->holdingID == 2396 || // Running Crude Car
+			ourLiveObject->holdingID == 4655 || // Deliver Truck - +slotsInvis driving
+			ourLiveObject->holdingID == 4660 || // Red Sports Car $30 - driving +varNumeral
+			ourLiveObject->holdingID == 4681 || // Blue Sports Car $30 - driving +varNumeral
+			ourLiveObject->holdingID == 4690 || // Green Sports Car $30 - driving +varNumeral
+			ourLiveObject->holdingID == 4699 || // Yellow Sports Car $30 - driving +varNumeral
+			ourLiveObject->holdingID == 4708 || // Black Sports Car $30 - driving +varNumeral
+			ourLiveObject->holdingID == 4719) { // White Sports Car $30 - driving +varNumeral
 				return true; // no dangerous animals for cars
 		}
 		// check dangerous animals for horses
 		if (objId == 764) return false; // Rattle Snake	
 		if (objId == 1385) return false; // Attacking Rattle Snake
+		if (objId == 631) return false; // Hungry Grizzly Bear
+		if (objId == 628) return false; // Grizzly Bear
+		if (objId == 645) return false; // Fed Grizzly Bear
+		if (objId == 4762) return false; // Sleepy Grizzly Bear
 	} else { // moving by walking / not riding
 		if (objId < maxObjects && isDangerousAnimal[objId]) return false;
 	}
@@ -4367,6 +4413,21 @@ void HetuwMod::onNameUpdate(LiveObject* o) {
 	}
 }
 
+void HetuwMod::onCurseUpdate(LiveObject* o) {
+	string type = "forgive";
+	if ( o->curseLevel ) {
+		type = "curse";
+	}
+	string data = to_string(o->id);
+	if ( o->name ) {
+        data += " " + string(o->name);
+	}
+	if ( o->curseName ) {
+    	data += hetuwLogSeperator + string(o->curseName);
+	}
+	HetuwMod::writeLineToLogs(type, data);
+}
+
 void HetuwMod::drawDeathMessages() {
 	if ( deathMessages.size() <= 0 ) return;
 
@@ -4871,6 +4932,8 @@ void HetuwMod::drawHelp() {
 	drawPos.y -= lineHeight;
 	drawPos.y -= lineHeight;
 	drawPos.y -= lineHeight;
+	drawPos.y -= lineHeight;
+	drawPos.y -= lineHeight;
 	sprintf(str, "YOU CAN CHANGE KEYS AND SETTINGS BY MODIFYING THE HETUW.CFG FILE");
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
@@ -4985,12 +5048,19 @@ void HetuwMod::drawHelp() {
 	sprintf(str, "CTRL+%c%c%c%c - DROP / PICK ITEM FROM CONTAINER", toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
+	sprintf(str, "ALT+%c%c%c%c - SWAP ITEM (WITH CONTAINER)", toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
+	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
+	drawPos.y -= lineHeight;
 	if (charKey_TileStandingOn == ' ') sprintf(str, "SPACE - USE/PICK UP ITEM ON THE TILE YOU ARE STANDING ON");
 	else sprintf(str, "%c - USE/PICK UP ITEM ON THE TILE YOU ARE STANDING ON", toupper(charKey_TileStandingOn));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 	if (charKey_TileStandingOn == ' ') sprintf(str, "CTRL+SPACE - DROP / PICK ITEM FROM CONTAINER");
 	else sprintf(str, "CTRL+%c - DROP / PICK ITEM FROM CONTAINER", toupper(charKey_TileStandingOn));
+	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
+	drawPos.y -= lineHeight;
+	if (charKey_TileStandingOn == ' ') sprintf(str, "ALT+SPACE - SWAP ITEM (WITH CONTAINER)");
+	else sprintf(str, "ALT+%c - SWAP ITEM (WITH CONTAINER)", toupper(charKey_TileStandingOn));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 	livingLifePage->hetuwDrawScaledHandwritingFont( "LEFTARROWKEY ZOOM IN", drawPos, guiScale );
@@ -5035,5 +5105,14 @@ void HetuwMod::drawHelp() {
 		drawPos.y += viewHeight/2 - 30*guiScale;
 		sprintf(str, "MAP RUNNING SINCE: %s", getArcTimeStr().c_str());
 		livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
+	}
+}
+
+void HetuwMod::drawHungerWarning() {
+	if ( ourLiveObject->foodStore + livingLifePage->hetuwGetYumBonus() <= 2 && ourLiveObject->maxFoodCapacity > 8) {
+		float alpha = ( 1 - (ourLiveObject->foodStore / 8.0) ) * 0.3;
+		doublePair startPos = livingLifePage->hetuwGetLastScreenViewCenter();
+		setDrawColor( 1, 0, 0, alpha );
+		drawRect( startPos, viewWidth * guiScale, viewHeight * guiScale );
 	}
 }
