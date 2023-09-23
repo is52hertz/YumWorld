@@ -729,10 +729,10 @@ void HetuwMod::initClosedDoorIDs() {
 	closedDoorIDs[9] = 2962; // 2962.txt:Property Gate# +owned
 }
 
-// outputs name[64] and value[64] - input line
-void HetuwMod::getSettingsFileLine( char* name, char* value, string line ) {
-	int n = 0;
-	int v = 0;
+// outputs name[] and value[] - input line
+void HetuwMod::getSettingsFileLine( char* name, size_t nameSize, char* value, size_t valueSize, string line ) {
+	size_t n = 0;
+	size_t v = 0;
 	bool readName = true;
 	for (unsigned i=0; i<line.length(); i++) {
 		if (line[i] == ' ') continue;
@@ -742,13 +742,15 @@ void HetuwMod::getSettingsFileLine( char* name, char* value, string line ) {
 				readName = false;
 				continue;
 			}
-			if (n >= 63) break;
+			if (n+1 >= nameSize) break;
 			name[n] = line[i];
 			n++;
 		} else {
-			if (v >= 63) break;
-			value[v] = line[i];
-			v++;
+			if (v+1 >= valueSize) break;
+			if (line[i] != '\r') {
+				value[v] = line[i];
+				v++;
+			}
 		}
 	}
 	name[n] = 0;
@@ -1064,9 +1066,9 @@ void HetuwMod::initSettings() {
 			//printf("hetuw read line: %s\n", line.c_str());
 			if (line.length() < 3) continue;
 			if (line[0] == '/' && line[1] == '/') continue;
-			char name[64];
-			char value[64];
-			getSettingsFileLine( name, value, line );
+			char name[256];
+			char value[256];
+			getSettingsFileLine( name, sizeof(name), value, sizeof(value), line );
 			if (strlen(name) < 1) continue;
 			//printf("hetuw name: %s, value: %s\n", name, value);
 			try {
@@ -1341,7 +1343,7 @@ void HetuwMod::createNewLogFile() {
 void HetuwMod::writeLineToLogs(string name, string data) {
 	if (!bWriteLogs) return;
 	ofstream ofs( hetuwLogFileName, ofstream::out | ofstream::app );
-	ofs << to_string((int)game_getCurrentTime()) << hetuwLogSeperator << name << hetuwLogSeperator << data << endl;
+	ofs << time(NULL) << hetuwLogSeperator << name << hetuwLogSeperator << data << endl;
 	ofs.close();
 }
 
@@ -1705,14 +1707,14 @@ void HetuwMod::objectDrawScaleStep() {
 }
 
 void HetuwMod::SayStep() {
-	if (sayBuffer.size() < 1) return;
-
 	if (clearSayBuffer) {
 		sayBuffer.clear();
 		sayBuffer.shrink_to_fit();
 		clearSayBuffer = false;
 		return;
 	}
+
+	if (sayBuffer.size() < 1) return;
 
 	double curTime = game_getCurrentTime();
 	if (curTime-timeLastSay < sayDelay) return;
