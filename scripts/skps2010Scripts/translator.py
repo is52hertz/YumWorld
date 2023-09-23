@@ -1,42 +1,80 @@
 #!/usr/bin/env python3
 import requests
 import os
+from os.path import dirname
+import sys
 
 
 def main():
-    print('0: English')
-    print('1: 正體中文')
-    print('2: 简体中文')
-    print('3: Українська')
-    print('Please input 0~3: ')
+    print('Connect to Google sheet...\n')
+
+    if getattr(sys, 'frozen', False):
+        path = dirname(sys.executable)
+    else:
+        path = os.path.dirname(__file__)
+    os.chdir(path)
+    url = 'https://script.google.com/macros/s/AKfycbx0agAIW99KUpLdLQX1ghFaMu81uopoQ7zNqHe7s3D5gWIZO8cb7tLRTGV8Gb8F4saC/exec'
+
+    try:
+        r = requests.get(f'{url}')
+    except requests.ConnectionError:
+        print('Unable to connect to the Google sheet')
+        return
+
+    if r.status_code != 200:
+        print('Unable to connect to the Google sheet')
+        return
+
+    langs = r.json()
+    for i in range(len(langs)):
+        print(f'{i}: {langs[i]}')
+    print(f'Please input 0~{len(langs)-1}: ')
     while 1:
         try:
             lang = int(input())
-            if lang < 0 or lang > 3:
+            if lang < 0 or lang > len(langs) - 1:
                 raise ValueError
             break
         except ValueError:
-            print('Please input 0~3: ')
+            print(f'Please input 0~{len(langs)-1}: ')
+
+    print('\nAppend English after translated objects?')
+    print('0: No')
+    print('1: Yes')
+    print('Please input 0~1: ')
+    while 1:
+        try:
+            is_append = int(input())
+            if is_append < 0 or is_append > 1:
+                raise ValueError
+            break
+        except ValueError:
+            print('Please input 0~1: ')
 
     print("Translating Objects...")
 
     if os.path.isfile('objects/cache.fcz'):
         os.remove('objects/cache.fcz')
 
-    r = requests.get(
-        f'https://script.google.com/macros/s/AKfycbx0agAIW99KUpLdLQX1ghFaMu81uopoQ7zNqHe7s3D5gWIZO8cb7tLRTGV8Gb8F4saC/exec?lang={lang}&type=0'
-    )
+    r = requests.get(f'{url}?lang={lang}&type=0')
 
-    if r.status_code != 200:
-        print('Unable to connect to the Google sheet')
-        return
+    if is_append:
+        r2 = requests.get(f'{url}?lang=0&type=0')
+        data2 = r2.json()
 
     data = r.json()
     for i in range(len(data['key'])):
-        if data['value'][i] != '':
+        translated = data['value'][i]
+        if translated != '':
             with open(f'objects/{data["key"][i]}', encoding='utf-8') as f:
                 content = f.readlines()
-            content[1] = data['value'][i] + '\n'
+
+            if is_append and data2['value'][i] != '':
+                content[1] = translated.split('#')[0].split(
+                    ' $')[0] + data2['value'][i] + '\n'
+            else:
+                content[1] = translated + '\n'
+
             with open(f'objects/{data["key"][i]}', 'w', encoding='utf-8') as f:
                 f.writelines(content)
 
@@ -52,9 +90,7 @@ def main():
 
     print("Translating Menu...")
 
-    r = requests.get(
-        f'https://script.google.com/macros/s/AKfycbx0agAIW99KUpLdLQX1ghFaMu81uopoQ7zNqHe7s3D5gWIZO8cb7tLRTGV8Gb8F4saC/exec?lang={lang}&type=1'
-    )
+    r = requests.get(f'{url}?lang={lang}&type=1')
     data = r.json()
 
     for i in range(len(data['key'])):
@@ -67,9 +103,7 @@ def main():
 
     print("Translating Images...")
 
-    r = requests.get(
-        f'https://script.google.com/macros/s/AKfycbx0agAIW99KUpLdLQX1ghFaMu81uopoQ7zNqHe7s3D5gWIZO8cb7tLRTGV8Gb8F4saC/exec?lang={lang}&type=2'
-    )
+    r = requests.get(f'{url}?lang={lang}&type=2')
     data = r.json()
     for i in range(len(data['key'])):
         link = data['value'][i]
@@ -83,9 +117,7 @@ def main():
 
     print("Apply settings...")
 
-    r = requests.get(
-        f'https://script.google.com/macros/s/AKfycbx0agAIW99KUpLdLQX1ghFaMu81uopoQ7zNqHe7s3D5gWIZO8cb7tLRTGV8Gb8F4saC/exec?lang={lang}&type=3'
-    )
+    r = requests.get(f'{url}?lang={lang}&type=3')
     data = r.json()
     for i in range(len(data['key'])):
         value = data['value'][i]
