@@ -9,7 +9,7 @@ const char *yumSubVersion = "b";
 // Please use this tag to describe your client honestly and uniquely
 // client_official is reserved for the unmodded client
 // do not include whitespace in your tag
-const char *clientTag = "client_skps2010+yumlife";
+const char *clientTag = "client_skps2010+yumlife-YumWorld";
 
 
 
@@ -274,7 +274,7 @@ static char *windowTitle = NULL;
 const char *getWindowTitle() {
 	if (windowTitle == NULL) {
 		char title[256] = "";
-		snprintf(title, sizeof(title), "YumLife v%d%s", binVersionNumber, yumSubVersion);
+		snprintf(title, sizeof(title), "YumWorld v%d%s", binVersionNumber, yumSubVersion);
 		windowTitle = strdup(title);
 	}
     return windowTitle;

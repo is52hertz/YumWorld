@@ -376,9 +376,9 @@ void HetuwMod::init() {
 }
 
 void HetuwMod::initHelpText() {
-	helpTextSearch[0] = "You pressed ";
+	helpTextSearch[0] = translate( "You pressed" );
 	helpTextSearch[0] += toupper(charKey_Search);
-	helpTextSearch[0] += " and activated SEARCH";
+	helpTextSearch[0] += translate( "and activated SEARCH" );
 
 	helpTextSearch[1] = "Abort with ESC";
 	helpTextSearch[2] = "Type in the name of the object you want to find";
