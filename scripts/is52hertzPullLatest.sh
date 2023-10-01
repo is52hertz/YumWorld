@@ -119,18 +119,18 @@ cd $1
 
 if [ ! -h OneLifeData7 ]
 then
-  mkdir OneLifeData7
+        mkdir OneLifeData7
 	cp ../OneLifeData7/* OneLifeData7/
 fi
 if [ ! -h minorGems]
 then
-  mkdir minorGems
-  cp ../minorGems/* minorGems/
+        mkdir minorGems
+        cp ../minorGems/* minorGems/
 fi
 if [ ! -h OneLife]
 then
-  mkdir OneLife
-  cp ../OneLife/* OneLife/
+        mkdir OneLife
+        cp ../OneLife/* OneLife/
 if [ ! -h animations ]
 then
 	ln -s OneLifeData7/animations .	
@@ -185,7 +185,7 @@ echo
 echo "Done downloading"
 echo "In order to compile type the following:"
 echo
-echo "cd $1"
+echo "like: cd $1"
 
 if [ "$2" = "1" ] # linux
 then
