@@ -56,8 +56,6 @@ then
 	mkdir $1
 fi
 
-cd $1
-
 
 # create link to SDL headers (for windows)
 if [ "$2" = "3" ]
@@ -78,9 +76,9 @@ then
 	fi
 fi
 
-ONELIFE_BRANCH=${ONELIFE_BRANCH:-master}
+ONELIFE_BRANCH=${ONELIFE_BRANCH:-skps}
 ONELIFE_REPO=${ONELIFE_REPO:-https://github.com/is52hertz/YumWorld.git}
-MINORGEMS_BRANCH=${MINORGEMS_BRANCH:-master}
+MINORGEMS_BRANCH=${MINORGEMS_BRANCH:-skps}
 MINORGEMS_REPO=${MINORGEMS_REPO:-https://github.com/is52hertz/YumWorldminorGems.git}
 
 if [ ! -e minorGems ]
@@ -108,9 +106,7 @@ git pull
 #git checkout -q OneLife_v$latestTaggedVersionA
 
 rm */cache.fcz
-
 cd ..
-
 
 latestVersion=$latestTaggedVersionB
 
@@ -119,61 +115,71 @@ latestVersion=$latestTaggedVersionB
 #	latestVersion=$latestTaggedVersionA
 #fi
 
+cd $1
 
 if [ ! -h OneLifeData7 ]
 then
-	ln -s ../OneLifeData7 .
+  mkdir OneLifeData7
+	cp ../OneLifeData7/* OneLifeData7/
 fi
-
+if [ ! -h minorGems]
+then
+  mkdir minorGems
+  cp ../minorGems/* minorGems/
+fi
+if [ ! -h OneLife]
+then
+  mkdir OneLife
+  cp ../OneLife/* OneLife/
 if [ ! -h animations ]
 then
-	ln -s ../OneLifeData7/animations .	
+	ln -s OneLifeData7/animations .	
 fi
 
 if [ ! -h categories ]
 then
-	ln -s ../OneLifeData7/categories .	
+	ln -s OneLifeData7/categories .	
 fi
 
 if [ ! -h ground ]
 then
-	ln -s ../OneLifeData7/ground .	
+	ln -s OneLifeData7/ground .	
 fi
 
 if [ ! -h music ]
 then
-	ln -s ../OneLifeData7/music .	
+	ln -s OneLifeData7/music .	
 fi
 
 if [ ! -h objects ]
 then
-	ln -s ../OneLifeData7/objects .	
+	ln -s OneLifeData7/objects .	
 fi
 
 if [ ! -h sounds ]
 then
-	ln -s ../OneLifeData7/sounds .	
+	ln -s OneLifeData7/sounds .	
 fi
 
 if [ ! -h sprites ]
 then
-	ln -s ../OneLifeData7/sprites .	
+	ln -s OneLifeData7/sprites .	
 fi
 
 if [ ! -h transitions ]
 then
-	ln -s ../OneLifeData7/transitions .	
+	ln -s OneLifeData7/transitions .	
 fi
 
 if [ ! -h dataVersionNumber.txt ]
 then
-	ln -s ../OneLifeData7/dataVersionNumber.txt .	
+	ln -s OneLifeData7/dataVersionNumber.txt .	
 fi
 
 
 cp OneLife/build/source/runToBuild .
 
-cp OneLife/scripts/hetuwScripts/hetuwCompileAll.sh ../.
+cp OneLife/scripts/is52hertzCompileAll.sh ../.
 
 echo
 echo "Done downloading"
