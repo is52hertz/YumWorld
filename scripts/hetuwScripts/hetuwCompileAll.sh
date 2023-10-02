@@ -22,4 +22,3 @@ then
 	cp OneLifeApp.exe ../bin/OneLifeApp_H_windows.exe
 	cd ..
 fi
-
