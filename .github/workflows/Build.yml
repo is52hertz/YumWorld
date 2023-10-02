@@ -25,6 +25,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install git g++ make imagemagick xclip libsdl1.2-dev libglu1-mesa-dev libgl1-mesa-dev mingw-w64
+      - name: freetype
+        run: |
+          cd Tool-1/Build/freetype-2.13.2
+          cd builds/unix
+          chmod +x configure
+          ./configure
+          cd ../../
+          make
+          sudo make install
       - name: scripts
         run: |
           cd WorkflowsBuild
