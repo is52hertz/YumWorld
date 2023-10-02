@@ -27,16 +27,16 @@ jobs:
           sudo apt-get install git g++ make imagemagick xclip libsdl1.2-dev libglu1-mesa-dev libgl1-mesa-dev mingw-w64
       - name: scripts
         run: |
-          cd scripts
-          chmod +x is52hertzPullLatest.sh 
-          ./is52hertzPullLatest.sh linux 1 
-          ./is52hertzPullLatest.sh windows 3 
-          ./is52hertzCompileAll.sh
+          cd WorkflowsBuild
+          chmod +x BuildYumWorldL.sh
+          ./BuildYumWorldL.sh
+          chmod +x BuildYumWorldW.sh
+          ./BuildYumWorldW.sh ${{ inputs.release_name }}
         env:
-          ONELIFE_BRANCH: ${{ github.ref_name }}
-          ONELIFE_REPO: ${{ vars.ONELIFE_REPO }}
-          MINORGEMS_BRANCH: ${{ vars.MINORGEMS_BRANCH }}
-          MINORGEMS_REPO: ${{ vars.MINORGEMS_REPO }}
+          # ONELIFE_BRANCH: ${{ github.ref_name }}
+          # ONELIFE_REPO: ${{ vars.ONELIFE_REPO }}
+          # MINORGEMS_BRANCH: ${{ vars.MINORGEMS_BRANCH }}
+          # MINORGEMS_REPO: ${{ vars.MINORGEMS_REPO }}
       - name: test dir
         run: |
           cd scripts
@@ -56,15 +56,16 @@ jobs:
         with:
           tag_name: ${{ inputs.release_name }}
           release_name: ${{ inputs.release_name }}
-          body: ${{ inputs.release_body }}
+          body: |
+            ${{ inputs.release_body }}
       - name: upload linux #LINUX
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./scripts/bin/OneLifeApp_Hz_linux
-          asset_name: OneLifeApp_Hz_linux
+          asset_path: ./workflowsBuild/YumWorld.zip
+          asset_name: YumWorld_Linux.zip
           asset_content_type: application/zip
       - name: upload windows #WINDOWS
         uses: actions/upload-release-asset@v1
@@ -72,6 +73,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./scripts/bin/OneLifeApp_Hz_windows.exe
-          asset_name: OneLifeApp_Hz_windows.exe
+          asset_path: ./workflowsBuild/YumWorld_Windows.zip
+          asset_name: YumWorld_Windows.zip
           asset_content_type: application/zip
