@@ -34,14 +34,14 @@ jobs:
           ./BuildYumWorldW.sh ${{ inputs.release_name }}
       - name: test dir
         run: |
-          cd scripts
+          cd WorkflowBuild
           ls
-          echo "_______w_________"
-          cd windows
+          echo "_________________"
+          cd YumWorldWindows
           ls
           cd ..
           echo "_________________"
-          cd bin
+          cd YumWorldLinux
           ls
       - name: create release
         id: create_release
