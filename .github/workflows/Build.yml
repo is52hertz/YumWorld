@@ -32,11 +32,6 @@ jobs:
           ./BuildYumWorldL.sh
           chmod +x BuildYumWorldW.sh
           ./BuildYumWorldW.sh ${{ inputs.release_name }}
-        env:
-          # ONELIFE_BRANCH: ${{ github.ref_name }}
-          # ONELIFE_REPO: ${{ vars.ONELIFE_REPO }}
-          # MINORGEMS_BRANCH: ${{ vars.MINORGEMS_BRANCH }}
-          # MINORGEMS_REPO: ${{ vars.MINORGEMS_REPO }}
       - name: test dir
         run: |
           cd scripts
