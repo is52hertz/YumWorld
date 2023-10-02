@@ -25,6 +25,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install git g++ make imagemagick xclip libsdl1.2-dev libglu1-mesa-dev libgl1-mesa-dev mingw-w64
+          sudo apt-get install build-essential
+          sudo apt-get install build-essential libgl1-mesa-dev
+          sudo apt-get install libglew-dev libsdl2-dev libsdl2-image-dev libglm-dev libfreetype6-dev
+          sudo apt-get install libglfw3-dev libglfw3
       - name: freetype
         run: |
           cd WorkflowsBuild/freetype-2.13.2
