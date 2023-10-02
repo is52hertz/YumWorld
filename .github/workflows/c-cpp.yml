@@ -33,10 +33,13 @@ jobs:
       - name: freetype
         run: |
           cd WorkflowsBuild/freetype-2.13.2
+          ls
           cd builds/unix
+          ls
           chmod +x configure
           ./configure
           cd ../..
+          ls
           make
           sudo make install
       - name: scripts
