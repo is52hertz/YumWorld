@@ -29,13 +29,14 @@ jobs:
           sudo apt-get install build-essential libgl1-mesa-dev
           sudo apt-get install libglew-dev libsdl2-dev libsdl2-image-dev libglm-dev libfreetype6-dev
           sudo apt-get install libglfw3-dev libglfw3
+          sudo apt install libharfbuzz-dev
       - name: freetype
         run: |
           cd WorkflowsBuild/freetype-2.13.2
           cd builds/unix
           chmod +x configure
           ./configure
-          cd ../../
+          cd ../..
           make
           sudo make install
       - name: scripts
