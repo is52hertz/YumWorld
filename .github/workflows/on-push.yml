@@ -5,13 +5,9 @@ on:
       - skps
 jobs:
   build:
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-      fail-fast: true
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: packages
         run: |
           sudo apt-get update
@@ -37,25 +33,25 @@ jobs:
         id: get_release_name
         run: |
           release_name=$(curl -s https://raw.githubusercontent.com/jasonrohrer/OneLifeData7/master/dataVersionNumber.txt)
-          echo "::set-output name=release_name::$release_name"
+          echo "RELEASE_NAME=$release_name" >> $GITHUB_ENV
       - name: scripts
         run: |
           cd WorkflowsBuild
           chmod +x BuildYumWorldL.sh
           ./BuildYumWorldL.sh
           chmod +x BuildYumWorldW.sh
-          ./BuildYumWorldW.sh ${{ steps.get_release_name.outputs.release_name }}
+          ./BuildYumWorldW.sh ${{ env.RELEASE_NAME }}
       - name: Display Build Result
         run: |
           ls -l WorkflowsBuild/YumWorld.zip
           ls -l WorkflowsBuild/YumWorld_Windows.zip
       - name: Upload Build Result
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: YumWorld_Windows_${{ steps.get_release_name.outputs.release_name }}.zip
+          name: YumWorld_Windows_${{ env.RELEASE_NAME }}.zip
           path: WorkflowsBuild/YumWorld_Windows.zip
       - name: Upload Another Build Result
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: YumWorld_Linux_${{ steps.get_release_name.outputs.release_name }}.zip
+          name: YumWorld_Linux_${{ env.RELEASE_NAME }}.zip
           path: WorkflowsBuild/YumWorld.zip
