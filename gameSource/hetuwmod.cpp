@@ -390,14 +390,14 @@ void HetuwMod::initHelpText() {
 	helpTextSearch[5] = "Or click on it in the list";
 
 
-	helpTextCustomCoord[0] = "You pressed ";
+	helpTextCustomCoord[0] = translate( "YUMS1" );
 	helpTextCustomCoord[0] += toupper(charKey_CreateHome);
-	helpTextCustomCoord[0] += " to create a new coord";
+	helpTextCustomCoord[0] += translate( "YUMS2" );
 
-	helpTextCustomCoord[1] += "Abort with ESC";
-	helpTextCustomCoord[2] += "Press any letter key to create a custom coord";
-	helpTextCustomCoord[3] += "Left click a coord in the list to make it your 0,0 position";
-	helpTextCustomCoord[4] += "Remove a coord by left clicking it while holding CTRL";
+	helpTextCustomCoord[1] += translate( "YUMS3" );
+	helpTextCustomCoord[2] += translate( "YUMS4" );
+	helpTextCustomCoord[3] += translate( "YUMS5" );
+	helpTextCustomCoord[4] += translate( "YUMS6" );
 }
 
 void HetuwMod::splitLogLine(string* lineElements, string line) { // lineElements should be a string array with size 16
@@ -2122,8 +2122,8 @@ void HetuwMod::drawCoordsHelpB() {
 
 	doublePair drawPos = lastScreenViewCenter;
 	drawPos.y += viewHeight*0.15;
-	drawPos = drawCustomTextWithBckgr(drawPos, "Type the X value of the coord");
-	drawPos = drawCustomTextWithBckgr(drawPos, "Press ESC to abort");
+	drawPos = drawCustomTextWithBckgr(drawPos, translate( "YUMSR1" ));
+	drawPos = drawCustomTextWithBckgr(drawPos, "YUMSR2");
 
 	customFont->hetuwSetScaleFactor(scale);
 }
@@ -2134,8 +2134,8 @@ void HetuwMod::drawCoordsHelpC() {
 
 	doublePair drawPos = lastScreenViewCenter;
 	drawPos.y += viewHeight*0.15;
-	drawPos = drawCustomTextWithBckgr(drawPos, "Type the Y value of the coord");
-	drawPos = drawCustomTextWithBckgr(drawPos, "Press ESC to abort");
+	drawPos = drawCustomTextWithBckgr(drawPos, translate( "YUMSR3" ));
+	drawPos = drawCustomTextWithBckgr(drawPos, translate( "YUMSR4" ));
 
 	customFont->hetuwSetScaleFactor(scale);
 }
@@ -4648,13 +4648,13 @@ void HetuwMod::drawPlayersInRangePanel() {
 	textPos.x -= 20*guiScale;
 	
 	if (iDrawPlayersInRangePanel == 1) {
-		if (playersInRangeNum < 10) sprintf(text, "PLAYERS IN RANGE:   %d", playersInRangeNum);
-		else if (playersInRangeNum < 100) sprintf(text, "PLAYERS IN RANGE:  %d", playersInRangeNum);
-		else sprintf(text, "PLAYERS IN RANGE: %d", playersInRangeNum);
+		if (playersInRangeNum < 10) sprintf(text, translate( "YUMPL1" ), playersInRangeNum);
+		else if (playersInRangeNum < 100) sprintf(text, translate( "YUMPL2" ), playersInRangeNum);
+		else sprintf(text, translate( "YUMPL3" ), playersInRangeNum);
 	} else {
-		if (playersInRangeNum < 10) sprintf(text, "PLAYERS ON SERVER:   %d", playersInRangeNum);
-		else if (playersInRangeNum < 100) sprintf(text, "PLAYERS ON SERVER:  %d", playersInRangeNum);
-		else sprintf(text, "PLAYERS ON SERVER: %d", playersInRangeNum);
+		if (playersInRangeNum < 10) sprintf(text, translate( "YUMPL4" ), playersInRangeNum);
+		else if (playersInRangeNum < 100) sprintf(text, translate( "YUMPL5" ), playersInRangeNum);
+		else sprintf(text, translate( "YUMPL6" ), playersInRangeNum);
 	}
 	livingLifePage->hetuwDrawScaledHandwritingFont( text, textPos, guiScale, alignRight );
 
