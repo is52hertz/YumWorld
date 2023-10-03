@@ -151,9 +151,8 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
         with:
-          upload_url: $UPLOAD_URL
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: WorkflowsBuild/YumWorld.zip
           asset_name: YumWorld.zip
           asset_content_type: application/zip
@@ -161,9 +160,8 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
         with:
-          upload_url: $UPLOAD_URL
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: WorkflowsBuild/YumWorld_Windows.zip
           asset_name: YumWorld_Windows.zip
           asset_content_type: application/zip
