@@ -4,14 +4,41 @@ on:
   workflow_dispatch:
     inputs:
       release_name:
-        description: Release Name
+        description: 对应OHOL版本
+        required: true
+        type: number
+      updata_en:
+        description: 更新内容[EN]
         required: true
         type: string
-      release_body:
-        description: Release Body
+      updata_zh:
+        description: 更新内容[ZH]
         required: true
         type: string
-
+      issues_en:
+        description: 已知问题[EN]
+        required: true
+        type: string
+      issues_zh:
+        description: 已知问题[ZH]
+        required: true
+        type: string
+      howtouse_en:
+        description: 如何使用[EN]（无则默认）
+        required: false
+        type: string
+      howtouse_zh:
+        description: 如何使用[ZH]（无则默认）
+        required: false
+        type: string
+      other_en:
+        description: 其它言语[EN]
+        required: false
+        type: string
+      other_zh:
+        description: 其它言语[ZH]
+        required: false
+        type: string
 jobs:
   build:
     strategy:
@@ -20,7 +47,7 @@ jobs:
       fail-fast: true
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: packages
         run: |
           sudo apt-get update
@@ -60,22 +87,73 @@ jobs:
           echo "_________________"
           cd YumWorldLinux
           ls
+      - name: Get release name from file
+        id: get_release_name
+        run: |
+          release_name=$(curl -s https://raw.githubusercontent.com/is52hertz/YumWorld/skps/WorkflowsBuild/YumWorldVersion.txt)
+          release_name=$(echo $release_name | tr -d '\r')
+          echo "RELEASE_NAME=$release_name" >> $GITHUB_ENV
+      - name: Set default text
+        id: set_default_text
+        run: |
+          if [[ -z "${{ inputs.howtouse_en }}" ]]; then
+            echo "::set-output name=default_text::Into the [`skps2010`](https://github.com/skps2010/OneLife) revamped OHOL catalog (for version [_V${{ inputs.release_name }}_](https://github.com/skps2010/OneLife/releases/tag/v${{ inputs.release_name }}))
+            This release is very experimental, lightly tested for Linux, not Windows."
+          else
+            echo "::set-output name=default_text::${{ inputs.howtouse_en }}"
+          fi
+      - name: Set default text2
+        id: set_default_text2
+        run: |
+          if [[ -z "${{ inputs.howtouse_zh }}" ]]; then
+            echo "::set-output name=default_text::放入[`skps2010`](https://github.com/skps2010/OneLife)改版的OHOL目录中（适用版本[_V${{ inputs.release_name }}_](https://github.com/skps2010/OneLife/releases/tag/v${{ inputs.release_name }})）
+            这个发布是非常实验性的，为在Linux进行了轻微测试，Windows则没有。"
+          else
+            echo "::set-output name=default_text::${{ inputs.howtouse_zh }}"
+          fi
       - name: create release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
         with:
-          tag_name: ${{ inputs.release_name }}
-          release_name: ${{ inputs.release_name }}
+          tag_name: ${{ env.RELEASE_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}[${{ inputs.release_name }}]
           body: |
-            ${{ inputs.release_body }}
+            ## **`YumWorld`**
+            > **`Linux/Windows`** _**`${{ env.RELEASE_NAME }}`**_
+            > _Forked [`skps2010`](https://github.com/skps2010/OneLife) [`YumLife`](https://github.com/selb/YumLife)_
+            ### Update
+            **`en_us`**
+            ${{ inputs.updata_en }}
+            **`zh_cn`**
+            ${{ inputs.updata_zh }}
+            ### Issues already known
+            **`en_us`**
+            ${{ inputs.issues_en }}
+            **`zh_cn`**
+            ${{ inputs.issues_zh }}
+            ### How to use
+            **`en_us`**
+            ${{ inputs.howtouse_en }}
+            **`zh_cn`**
+            ${{ inputs.howtouse_zh }}
+            ### Other words
+            **`en_us`**
+            ${{ inputs.other_en }}
+            **`zh_cn`**
+            ${{ inputs.other_zh }}
+            ### Links
+            [**`issues`**]https://github.com/is52hertz/YumWorldissues/issues
+            [_`JoinUs!_discord`_]https://discord.gg/UFZg3WXGrU
       - name: upload linux #LINUX
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: $UPLOAD_URL
           asset_path: WorkflowsBuild/YumWorld.zip
           asset_name: YumWorld.zip
           asset_content_type: application/zip
@@ -83,8 +161,9 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: $UPLOAD_URL
           asset_path: WorkflowsBuild/YumWorld_Windows.zip
           asset_name: YumWorld_Windows.zip
           asset_content_type: application/zip
