@@ -106,8 +106,7 @@ jobs:
         id: set_default_text2
         run: |
           if [[ -z "${{ inputs.howtouse_zh }}" ]]; then
-            echo "::set-output name=default_text::放入[`skps2010`](https://github.com/skps2010/OneLife)改版的OHOL目录中（适用版本[_V${{ inputs.release_name }}_](https://github.com/skps2010/OneLife/releases/tag/v${{ inputs.release_name }})）
-            这个发布是非常实验性的，为在Linux进行了轻微测试，Windows则没有。"
+            echo "::set-output name=default_text::放入[`skps2010`](https://github.com/skps2010/OneLife)改版的OHOL目录中（适用版本[_V${{ inputs.release_name }}_](https://github.com/skps2010/OneLife/releases/tag/v${{ inputs.release_name }})）\n这个发布是非常实验性的，为在Linux进行了轻微测试，Windows则没有。"
           else
             echo "::set-output name=default_text::${{ inputs.howtouse_zh }}"
           fi
