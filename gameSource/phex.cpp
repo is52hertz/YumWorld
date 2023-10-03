@@ -178,11 +178,11 @@ void Phex::init() {
 	recHotKeyInfo[1] = recLineBelowTitle[1]-0.03;
 	recHotKeyInfo[2] = recBckgr[2];
 	recHotKeyInfo[3] = recLineBelowTitle[1];
-	textHotKeyInfo.str = "press ";
+	textHotKeyInfo.str = translate( "YUMP1" );
 	textHotKeyInfo.str += (char)HetuwMod::charKey_Phex;
-	textHotKeyInfo.str += " or CTRL+";
+	textHotKeyInfo.str += translate( "YUMP2" );
 	textHotKeyInfo.str += (char)HetuwMod::charKey_Phex;
-	textHotKeyInfo.str += " to toggle";
+	textHotKeyInfo.str += translate( "YUMP3" );
 	textHotKeyInfo.getWidthHeight();
 	textHotKeyInfo.setTextPosToCenter(recHotKeyInfo);
 	
@@ -200,7 +200,7 @@ void Phex::initFont() {
 	int fontCharSpacing = 3; // vanilla main font is 6
 	int fontSpaceWidth = 8; // vanilla main font is 16
 	char fontFixedWidth = false;
-	mainFont = new HetuwFont("font_32_64.tga", fontCharSpacing, fontSpaceWidth, fontFixedWidth, mainFontScaleFactor);
+	mainFont = new HetuwFont("font_32_32.tga", fontCharSpacing, fontSpaceWidth, fontFixedWidth, mainFontScaleFactor);
 	mainFont->setMinimumPositionPrecision( 1 );
 	mainFont->hetuwMaxXActive = true;
 	setMainFontScale();
@@ -249,7 +249,7 @@ void Phex::initButtons() {
 	butPhex.visible = false;
 	buttons.push_back(&butPhex);
 
-	butTurnOff.init("Turn Off", &onClickTurnOff);
+	butTurnOff.init(translate( "YUMP4" ), &onClickTurnOff);
 	setButtonStyle(&butTurnOff);
 	butTurnOff.setPosition(recBckgr[0], recBckgr[3]-butHeight);
 	butTurnOff.setWidth(butWidth);
@@ -257,7 +257,7 @@ void Phex::initButtons() {
 	butTurnOff.setDrawData();
 	buttons.push_back(&butTurnOff);
 
-	butMinimize.init("Minimize", &minimize);
+	butMinimize.init(translate( "YUMP5" ), &minimize);
 	setButtonStyle(&butMinimize);
 	butMinimize.setPosition(recBckgr[0]+butWidth-butBorderSize/2.0, recBckgr[3]-butHeight);
 	butMinimize.setWidth(butWidth-butBorderSize/2.0);
@@ -265,7 +265,7 @@ void Phex::initButtons() {
 	butMinimize.setDrawData();
 	buttons.push_back(&butMinimize);
 
-	butMaximize.init("Maximize", &maximize);
+	butMaximize.init(translate( "YUMP6" ), &maximize);
 	setButtonStyle(&butMaximize);
 	butMaximize.setPosition(1.0-recBckgrWidth, 0);
 	butMaximize.setWidth(recBckgrWidth);
@@ -335,7 +335,7 @@ void Phex::serverCmdUSERNAME(std::vector<std::string> input) {
 	users[publicHash].name = input[1];
 	users[publicHash].displayName = users[publicHash].name;
 	if (userNameWasChanged) {
-		addCmdMessageToChatWindow("name set to: "+input[1]);
+		addCmdMessageToChatWindow(translate( "YUMP7" )+input[1]);
 		userNameWasChanged = false;
 	}
 }
