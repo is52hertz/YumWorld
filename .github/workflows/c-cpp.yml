@@ -76,8 +76,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./workflowsBuild/YumWorld.zip
-          asset_name: YumWorld_Linux.zip
+          asset_path: WorkflowsBuild/YumWorld.zip
+          asset_name: YumWorld.zip
           asset_content_type: application/zip
       - name: upload windows #WINDOWS
         uses: actions/upload-release-asset@v1
@@ -85,6 +85,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./workflowsBuild/YumWorld_Windows.zip
+          asset_path: WorkflowsBuild/YumWorld_Windows.zip
           asset_name: YumWorld_Windows.zip
           asset_content_type: application/zip

@@ -1,0 +1,61 @@
+name: Build
+on:
+  push:
+    branches:
+      - skps
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+      fail-fast: true
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install git g++ make imagemagick xclip libsdl1.2-dev libglu1-mesa-dev libgl1-mesa-dev mingw-w64
+          sudo apt-get install build-essential
+          sudo apt-get install build-essential libgl1-mesa-dev
+          sudo apt-get install libglew-dev libsdl2-dev libsdl2-image-dev libglm-dev libfreetype6-dev
+          sudo apt-get install libglfw3-dev libglfw3
+          sudo apt install libharfbuzz-dev
+      - name: freetype
+        run: |
+          cd WorkflowsBuild/freetype-2.13.2
+          ls
+          cd builds/unix
+          ls
+          chmod +x configure
+          ./configure
+          cd ../..
+          ls
+          make
+          sudo make install
+      - name: Get release name from file
+        id: get_release_name
+        run: |
+          release_name=$(curl -s https://raw.githubusercontent.com/jasonrohrer/OneLifeData7/master/dataVersionNumber.txt)
+          echo "::set-output name=release_name::$release_name"
+      - name: scripts
+        run: |
+          cd WorkflowsBuild
+          chmod +x BuildYumWorldL.sh
+          ./BuildYumWorldL.sh
+          chmod +x BuildYumWorldW.sh
+          ./BuildYumWorldW.sh ${{ steps.get_release_name.outputs.release_name }}
+      - name: Display Build Result
+        run: |
+          ls -l WorkflowsBuild/YumWorld.zip
+          ls -l WorkflowsBuild/YumWorld_Windows.zip
+      - name: Upload Build Result
+        uses: actions/upload-artifact@v2
+        with:
+          name: YumWorld_Windows_${{ steps.get_release_name.outputs.release_name }}.zip
+          path: WorkflowsBuild/YumWorld_Windows.zip
+      - name: Upload Another Build Result
+        uses: actions/upload-artifact@v2
+        with:
+          name: YumWorld_Linux_${{ steps.get_release_name.outputs.release_name }}.zip
+          path: WorkflowsBuild/YumWorld.zip
