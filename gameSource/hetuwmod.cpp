@@ -1101,7 +1101,7 @@ void HetuwMod::initSettings() {
 	if (migrating) {
 		ofs.open("hetuw.cfg", ofstream::out);
 		ofs << "// +------------------------------------------------+" << endl;
-		ofs << "// | !!  WARNING: YumLife now uses yumlife.cfg.  !! |" << endl;
+		ofs << "// | !!  WARNING: YumWorld now uses yumlife.cfg. !! |" << endl;
 		ofs << "// |                                                |" << endl;
 		ofs << "// | Changes made here will not affect YumLife.     |" << endl;
 		ofs << "// | Your settings have been preserved below in     |" << endl;
@@ -1267,7 +1267,7 @@ void HetuwMod::initCustomFont() {
 	int fontSpaceWidth = 8; // vanilla main font is 16
 	char fontFixedWidth = false;
 	double fontScaleFactor = 16.0;
-	customFont = new HetuwFont("font_32_64.tga", fontCharSpacing, fontSpaceWidth, fontFixedWidth, fontScaleFactor);
+	customFont = new HetuwFont("font_32_32.tga", fontCharSpacing, fontSpaceWidth, fontFixedWidth, fontScaleFactor);
 	customFont->setMinimumPositionPrecision( 1 );
 }
 
@@ -4914,9 +4914,9 @@ void HetuwMod::drawHelp() {
 		drawPos.y -= lineHeight;
 	}
 	drawPos.y -= lineHeight;
-	livingLifePage->hetuwDrawScaledHandwritingFont( "PRESS NUMBER KEY FOR SHORT EMOTE", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "yumh1" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	livingLifePage->hetuwDrawScaledHandwritingFont( "WRITE EMOTE FOR PERMANENT EMOTE", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "yumh2" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	drawPos.y -= lineHeight;
@@ -4924,7 +4924,7 @@ void HetuwMod::drawHelp() {
 	drawPos.y -= lineHeight;
 	drawPos.y -= lineHeight;
 	drawPos.y -= lineHeight;
-	sprintf(str, "YOU CAN CHANGE KEYS AND SETTINGS BY MODIFYING THE HETUW.CFG FILE");
+	sprintf(str, translate( "yumh3" ));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
@@ -4932,7 +4932,7 @@ void HetuwMod::drawHelp() {
 	drawPos.x -= viewWidth/2 - 250*guiScale;
 	drawPos.y += viewHeight/2 - 80*guiScale;
 
-	livingLifePage->hetuwDrawScaledHandwritingFont( "= MAKE SCREENSHOT", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "yumh4" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	setHelpColorSpecial();
