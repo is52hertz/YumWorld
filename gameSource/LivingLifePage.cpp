@@ -5064,10 +5064,12 @@ ObjectAnimPack LivingLifePage::drawLiveObject(
         ( inObj->lastHoldingID > 0 && 
           getObject( inObj->lastHoldingID )->rideable ) ) {
     
-        if( curType == ground2 || curType == moving ) {
+        if( curType == ground2 || curType == moving ||
+            curType == extra || curType == extraB ) {
             frozenArmType = moving;
             }
-        if( fadeTargetType == ground2 || fadeTargetType == moving ) {
+        if( fadeTargetType == ground2 || fadeTargetType == moving ||
+            fadeTargetType == extra || fadeTargetType == extraB ) {
             frozenArmFadeTargetType = moving;
             }
         }
@@ -13612,7 +13614,7 @@ void LivingLifePage::step() {
     
     
 
-    if( ourObject != NULL ) {
+    if( ourObject != NULL && areLiveTriggersEnabled() ) {
         char newTrigger = false;
         
         AnimType anim = stepLiveTriggers( &newTrigger );
@@ -14846,7 +14848,14 @@ void LivingLifePage::step() {
                     
                     if( d > 32 ) {
                         addAncientHomeLocation( posX, posY );
-						HetuwMod::addHomeLocation( posX, posY, (monumentID == HetuwMod::OBJID_EndTowerSound) ? HetuwMod::hpt_apoc : HetuwMod::hpt_bell );
+                        // YumLife mod
+                        HetuwMod::homePosType hpt = HetuwMod::hpt_bell;
+                        if ( monumentID == HetuwMod::OBJID_EndTower2 ||
+                             monumentID == HetuwMod::OBJID_EndTower3 ||
+                             monumentID == HetuwMod::OBJID_EndTower4 ) {
+                                hpt = HetuwMod::hpt_apoc;
+                            }
+                        HetuwMod::addHomeLocation( posX, posY, hpt );
                         isAncientHomePosHell = false;
                         
                         // play sound in distance
@@ -16963,6 +16972,8 @@ void LivingLifePage::step() {
                 o.currentEmot = NULL;
                 o.emotClearETATime = 0;
                 
+                o.extraAnimType = extraB;
+
                 o.killMode = false;
                 o.killWithID = -1;
                 o.chasingUs = false;
@@ -19886,6 +19897,7 @@ void LivingLifePage::step() {
                                 
                                 existing->currentSpeech = 
                                     stringDuplicate( &( firstSpace[1] ) );
+                                HetuwMod::decodeDigits( existing->currentSpeech );  // YumLife mod
                                 
 
                                 double curTime = game_getCurrentTime();
@@ -20406,6 +20418,49 @@ void LivingLifePage::step() {
                                 if( oldEmot != existing->currentEmot &&
                                     existing->currentEmot != NULL ) {
                                     newEmotPlaySound = existing->currentEmot;
+                                    
+                                    }
+                                
+                                if( existing->currentEmot != NULL ) {
+                                    if( existing->currentEmot->extraAnimIndex
+                                        > -1 
+                                        &&
+                                        computeCurrentAge( existing ) >= 1 ) {
+                                        
+                                        // don't allow extra animations
+                                        // for emotes for people who
+                                        // are less that 1 year old
+                                        // since they can revert back
+                                        // to crying at any time
+                                        // and we don't want to interfere
+                                        // with their crying animaton
+
+
+                                        // toggle back and forth
+                                        // between extra slots so that
+                                        // extra animations can transition
+                                        // smoothly
+                                        if( existing->extraAnimType ==
+                                            extraB ) {
+                                            
+                                            setExtraIndex( 
+                                                existing->
+                                                currentEmot->extraAnimIndex );
+                                        
+                                            addNewAnimPlayerOnly( existing, 
+                                                                  extra );
+                                            existing->extraAnimType = extra;
+                                            }
+                                        else {
+                                            setExtraIndexB( 
+                                                existing->
+                                                currentEmot->extraAnimIndex );
+                                        
+                                            addNewAnimPlayerOnly( existing, 
+                                                                  extraB );
+                                            existing->extraAnimType = extraB;
+                                            }
+                                        }
                                     }
                                 }
                             
@@ -22411,6 +22466,16 @@ void LivingLifePage::step() {
             }
         
         
+        double delay = 0.166;
+        // Don't apply delay reduction for baby pickup. These are other
+        // players, not in-game objects, so they are more likely to be annoyed
+        // by being juggled extra fast. It is also possible (but rare) for
+        // excessive baby juggling to cause a client-side desync, and delay
+        // reduction might increase the odds of accidentally triggering this.
+        if (0 != strncmp("BABY ", nextActionMessageToSend, 5)) {
+            delay = delay * (100 - HetuwMod::delayReduction) / 100;
+            }
+
         // wait until 
         // we've stopped moving locally
         // AND animation has played for a bit
@@ -22419,7 +22484,7 @@ void LivingLifePage::step() {
         // AND server agrees with our position
         if( ! ourLiveObject->inMotion && 
             currentTime - ourLiveObject->pendingActionAnimationStartTime > 
-            0.166 - ourLiveObject->lastResponseTimeDelta &&
+            delay - ourLiveObject->lastResponseTimeDelta &&
             ourLiveObject->xd == ourLiveObject->xServer &&
             ourLiveObject->yd == ourLiveObject->yServer ) {
  
