@@ -90,13 +90,13 @@ class HetuwMod
 		}
 	};
 
-	#define hetuwDefaultOurFamilyName "MYFAMILY"
+	#define hetuwDefaultOurFamilyName translate( "YUMPL7" )
 	#define hetuwMaxFamilyNameLen 13
 	struct FamilyInRange {
 		char* name;
 		int count;
 		int youngWomenCount;
-		std::string raceName = "UNKNOWN";
+		std::string raceName = translate( "YUMPL8" );
 		int generation = 0;
 		FamilyInRange() {
 			name = new char[hetuwMaxFamilyNameLen];

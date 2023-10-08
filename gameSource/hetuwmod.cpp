@@ -378,9 +378,9 @@ void HetuwMod::init() {
 }
 
 void HetuwMod::initHelpText() {
-	helpTextSearch[0] = "You pressed ";
+	helpTextSearch[0] = translate( "You pressed" );
 	helpTextSearch[0] += toupper(charKey_Search);
-	helpTextSearch[0] += " and activated SEARCH";
+	helpTextSearch[0] += translate( "and activated SEARCH" );
 
 	helpTextSearch[1] = "Abort with ESC";
 	helpTextSearch[2] = "Type in the name of the object you want to find";
@@ -392,14 +392,14 @@ void HetuwMod::initHelpText() {
 	helpTextSearch[5] = "Or click on it in the list";
 
 
-	helpTextCustomCoord[0] = "You pressed ";
+	helpTextCustomCoord[0] = translate( "YUMS1" );
 	helpTextCustomCoord[0] += toupper(charKey_CreateHome);
-	helpTextCustomCoord[0] += " to create a new coord";
+	helpTextCustomCoord[0] += translate( "YUMS2" );
 
-	helpTextCustomCoord[1] += "Abort with ESC";
-	helpTextCustomCoord[2] += "Press any letter key to create a custom coord";
-	helpTextCustomCoord[3] += "Left click a coord in the list to make it your 0,0 position";
-	helpTextCustomCoord[4] += "Remove a coord by left clicking it while holding CTRL";
+	helpTextCustomCoord[1] += translate( "YUMS3" );
+	helpTextCustomCoord[2] += translate( "YUMS4" );
+	helpTextCustomCoord[3] += translate( "YUMS5" );
+	helpTextCustomCoord[4] += translate( "YUMS6" );
 }
 
 void HetuwMod::splitLogLine(string* lineElements, string line) { // lineElements should be a string array with size 16
@@ -1115,7 +1115,7 @@ void HetuwMod::initSettings() {
 	if (migrating) {
 		ofs.open("hetuw.cfg", ofstream::out);
 		ofs << "// +------------------------------------------------+" << endl;
-		ofs << "// | !!  WARNING: YumLife now uses yumlife.cfg.  !! |" << endl;
+		ofs << "// | !!  WARNING: YumWorld now uses yumlife.cfg. !! |" << endl;
 		ofs << "// |                                                |" << endl;
 		ofs << "// | Changes made here will not affect YumLife.     |" << endl;
 		ofs << "// | Your settings have been preserved below in     |" << endl;
@@ -1281,7 +1281,7 @@ void HetuwMod::initCustomFont() {
 	int fontSpaceWidth = 8; // vanilla main font is 16
 	char fontFixedWidth = false;
 	double fontScaleFactor = 16.0;
-	customFont = new HetuwFont("font_32_64.tga", fontCharSpacing, fontSpaceWidth, fontFixedWidth, fontScaleFactor);
+	customFont = new HetuwFont("font_32_32.tga", fontCharSpacing, fontSpaceWidth, fontFixedWidth, fontScaleFactor);
 	customFont->setMinimumPositionPrecision( 1 );
 }
 
@@ -2185,8 +2185,8 @@ void HetuwMod::drawCoordsHelpB() {
 
 	doublePair drawPos = lastScreenViewCenter;
 	drawPos.y += viewHeight*0.15;
-	drawPos = drawCustomTextWithBckgr(drawPos, "Type the X value of the coord");
-	drawPos = drawCustomTextWithBckgr(drawPos, "Press ESC to abort");
+	drawPos = drawCustomTextWithBckgr(drawPos, translate( "YUMSR1" ));
+	drawPos = drawCustomTextWithBckgr(drawPos, "YUMSR2");
 
 	customFont->hetuwSetScaleFactor(scale);
 }
@@ -2197,8 +2197,8 @@ void HetuwMod::drawCoordsHelpC() {
 
 	doublePair drawPos = lastScreenViewCenter;
 	drawPos.y += viewHeight*0.15;
-	drawPos = drawCustomTextWithBckgr(drawPos, "Type the Y value of the coord");
-	drawPos = drawCustomTextWithBckgr(drawPos, "Press ESC to abort");
+	drawPos = drawCustomTextWithBckgr(drawPos, translate( "YUMSR3" ));
+	drawPos = drawCustomTextWithBckgr(drawPos, translate( "YUMSR4" ));
 
 	customFont->hetuwSetScaleFactor(scale);
 }
@@ -4741,13 +4741,13 @@ void HetuwMod::drawPlayersInRangePanel() {
 	textPos.x -= 20*guiScale;
 	
 	if (iDrawPlayersInRangePanel == 1) {
-		if (playersInRangeNum < 10) sprintf(text, "PLAYERS IN RANGE:   %d", playersInRangeNum);
-		else if (playersInRangeNum < 100) sprintf(text, "PLAYERS IN RANGE:  %d", playersInRangeNum);
-		else sprintf(text, "PLAYERS IN RANGE: %d", playersInRangeNum);
+		if (playersInRangeNum < 10) sprintf(text, translate( "YUMPL1" ), playersInRangeNum);
+		else if (playersInRangeNum < 100) sprintf(text, translate( "YUMPL2" ), playersInRangeNum);
+		else sprintf(text, translate( "YUMPL3" ), playersInRangeNum);
 	} else {
-		if (playersInRangeNum < 10) sprintf(text, "PLAYERS ON SERVER:   %d", playersInRangeNum);
-		else if (playersInRangeNum < 100) sprintf(text, "PLAYERS ON SERVER:  %d", playersInRangeNum);
-		else sprintf(text, "PLAYERS ON SERVER: %d", playersInRangeNum);
+		if (playersInRangeNum < 10) sprintf(text, translate( "YUMPL4" ), playersInRangeNum);
+		else if (playersInRangeNum < 100) sprintf(text, translate( "YUMPL5" ), playersInRangeNum);
+		else sprintf(text, translate( "YUMPL6" ), playersInRangeNum);
 	}
 	livingLifePage->hetuwDrawScaledHandwritingFont( text, textPos, guiScale, alignRight );
 
@@ -5007,13 +5007,17 @@ void HetuwMod::drawHelp() {
 		}
 	}
 	drawPos.y -= lineHeight;
-	livingLifePage->hetuwDrawScaledHandwritingFont( "PRESS NUMBER KEY FOR SHORT EMOTE", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "YUMH1" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	livingLifePage->hetuwDrawScaledHandwritingFont( "WRITE EMOTE FOR PERMANENT EMOTE", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "YUMH2" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	drawPos.y -= lineHeight;
-	sprintf(str, "YOU CAN CHANGE KEYS AND SETTINGS BY MODIFYING THE HETUW.CFG FILE");
+	drawPos.y -= lineHeight;
+	drawPos.y -= lineHeight;
+	drawPos.y -= lineHeight;
+	drawPos.y -= lineHeight;
+	sprintf(str, translate( "YUMH3" ));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
@@ -5021,35 +5025,35 @@ void HetuwMod::drawHelp() {
 	drawPos.x -= viewWidth/2 - 250*guiScale;
 	drawPos.y += viewHeight/2 - 80*guiScale;
 
-	livingLifePage->hetuwDrawScaledHandwritingFont( "= MAKE SCREENSHOT", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "YUMH4" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	setHelpColorSpecial();
-	sprintf(str, "%c TOGGLE SHOW HELP", toupper(charKey_ShowHelp));
+	sprintf(str, translate( "YUMH5" ), toupper(charKey_ShowHelp));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (cameraIsFixed) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c TOGGLE FIX CAMERA", toupper(charKey_FixCamera));
+	sprintf(str, translate( "YUMH6" ), toupper(charKey_FixCamera));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (iDrawNames > 0) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c TOGGLE SHOW NAMES", toupper(charKey_ShowNames));
+	sprintf(str, translate( "YUMH7" ), toupper(charKey_ShowNames));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (bDrawCords) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c TOGGLE SHOW CORDS", toupper(charKey_ShowCords));
+	sprintf(str, translate( "YUMH8" ), toupper(charKey_ShowCords));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (iDrawPlayersInRangePanel > 0) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c TOGGLE SHOW PLAYERS IN RANGE", toupper(charKey_ShowPlayersInRange));
+	sprintf(str, translate( "YUMH9" ), toupper(charKey_ShowPlayersInRange));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
@@ -5061,41 +5065,41 @@ void HetuwMod::drawHelp() {
 
 	if (bDrawHomeCords) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c TOGGLE SHOW HOME CORDS", toupper(charKey_ShowHomeCords));
+	sprintf(str, translate( "YUMH10" ), toupper(charKey_ShowHomeCords));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (bDrawHostileTiles) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c TOGGLE SHOW HOSTILE TILES", toupper(charKey_ShowHostileTiles));
+	sprintf(str, translate( "YUMH11" ), toupper(charKey_ShowHostileTiles));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (bxRay) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c X-RAY VISION", toupper(charKey_xRay));
+	sprintf(str, translate( "YUMH12" ), toupper(charKey_xRay));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (bDrawYum) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c FIND YUM", toupper(charKey_FindYum));
+	sprintf(str, translate( "YUMH13" ), toupper(charKey_FindYum));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (bDrawGrid) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c SHOW GRID", toupper(charKey_ShowGrid));
+	sprintf(str, translate( "YUMH14" ), toupper(charKey_ShowGrid));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	setHelpColorNormal();
 
-	sprintf(str, "%c - USE SHORTS POCKET", toupper(charKey_Pocket));
+	sprintf(str, translate( "YUMH15" ), toupper(charKey_Pocket));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
-	sprintf(str, "SHIFT+%c - USE APRON POCKET", toupper(charKey_Pocket));
+	sprintf(str, translate( "YUMH16" ), toupper(charKey_Pocket));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
@@ -5103,68 +5107,68 @@ void HetuwMod::drawHelp() {
 	drawPos.x -= viewWidth/2 - 640*guiScale;
 	drawPos.y += viewHeight/2 - 80*guiScale;
 
-	sprintf(str, "%c - USE BACKPACK", toupper(charKey_Backpack));
+	sprintf(str, translate( "YUMH17"), toupper(charKey_Backpack));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "SHIFT+%c - USE BACKPACK", toupper(charKey_Backpack));
+	sprintf(str, translate( "YUMH18" ), toupper(charKey_Backpack));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "%c - TAKE OFF BACKPACK", toupper(charKey_TakeOffBackpack));
+	sprintf(str, translate( "YUMH19" ), toupper(charKey_TakeOffBackpack));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "%c - EAT / PUT CLOTHES ON", toupper(charKey_Eat));
+	sprintf(str, translate( "YUMH20" ), toupper(charKey_Eat));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "%c - PICK UP / DROP BABY", toupper(charKey_Baby));
+	sprintf(str, translate( "YUMH21" ), toupper(charKey_Baby));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "%c%c%c%c - MOVE", toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
+	sprintf(str, translate( "YUMH22"), toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "SHIFT+%c%c%c%c - USE/PICK UP ITEM", toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
+	sprintf(str, translate( "YUMH23"), toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "CTRL+%c%c%c%c - DROP / PICK ITEM FROM CONTAINER", toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
+	sprintf(str, translate( "YUMH24"), toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "ALT+%c%c%c%c - SWAP ITEM (WITH CONTAINER)", toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
+	sprintf(str, translate( "YUMH25"), toupper(charKey_Up), toupper(charKey_Left), toupper(charKey_Down), toupper(charKey_Right));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	if (charKey_TileStandingOn == ' ') sprintf(str, "SPACE - USE/PICK UP ITEM ON THE TILE YOU ARE STANDING ON");
-	else sprintf(str, "%c - USE/PICK UP ITEM ON THE TILE YOU ARE STANDING ON", toupper(charKey_TileStandingOn));
+	if (charKey_TileStandingOn == ' ') sprintf(str, translate( "YUMH26" ));
+	else sprintf(str, translate( "YUMH27" ), toupper(charKey_TileStandingOn));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	if (charKey_TileStandingOn == ' ') sprintf(str, "CTRL+SPACE - DROP / PICK ITEM FROM CONTAINER");
-	else sprintf(str, "CTRL+%c - DROP / PICK ITEM FROM CONTAINER", toupper(charKey_TileStandingOn));
+	if (charKey_TileStandingOn == ' ') sprintf(str, translate( "YUMH28" ));
+	else sprintf(str, translate( "YUMH29" ), toupper(charKey_TileStandingOn));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	if (charKey_TileStandingOn == ' ') sprintf(str, "ALT+SPACE - SWAP ITEM (WITH CONTAINER)");
-	else sprintf(str, "ALT+%c - SWAP ITEM (WITH CONTAINER)", toupper(charKey_TileStandingOn));
+	if (charKey_TileStandingOn == ' ') sprintf(str, translate( "YUMH30" ));
+	else sprintf(str, translate( "YUMH31" ), toupper(charKey_TileStandingOn));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	livingLifePage->hetuwDrawScaledHandwritingFont( "LEFTARROWKEY ZOOM IN", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "YUMH32" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	livingLifePage->hetuwDrawScaledHandwritingFont( "RIGHTARROWKEY ZOOM OUT", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "YUMH33" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	livingLifePage->hetuwDrawScaledHandwritingFont( "CTRL+ARROWKEYS SCALE GUI", drawPos, guiScale );
+	livingLifePage->hetuwDrawScaledHandwritingFont( translate( "YUMH34" ), drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "%c THEN KEY - REMEMBER CORDS", toupper(charKey_CreateHome));
+	sprintf(str, translate( "YUMH35" ), toupper(charKey_CreateHome));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "SHIFT+%c THEN KEY - REMEMBER CUSTOM CORDS", toupper(charKey_CreateHome));
+	sprintf(str, translate( "YUMH36" ), toupper(charKey_CreateHome));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
-	sprintf(str, "SHIFT+%c - RESET CORDS TO WHERE YOU ARE STANDING", toupper(charKey_ShowCords));
+	sprintf(str, translate( "YUMH37" ), toupper(charKey_ShowCords));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
 	if (searchWordList.size() > 0) setHelpColorSpecial();
 	else setHelpColorNormal();
-	sprintf(str, "%c - SEARCH FOR AN OBJECT", toupper(charKey_Search));
+	sprintf(str, translate( "YUMH38" ), toupper(charKey_Search));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 	setHelpColorNormal();
-	sprintf(str, "SHIFT+%c - DELETE LAST SEARCH WORD", toupper(charKey_Search));
+	sprintf(str, translate( "YUMH39" ), toupper(charKey_Search));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
@@ -5174,7 +5178,7 @@ void HetuwMod::drawHelp() {
 	//livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	//drawPos.y -= lineHeight;
 
-	sprintf(str, "CTRL+MOUSECLICK - TILE BASED CLICK");
+	sprintf(str, translate( "YUMH40" ));
 	livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	drawPos.y -= lineHeight;
 
@@ -5182,7 +5186,7 @@ void HetuwMod::drawHelp() {
 		drawPos = lastScreenViewCenter;
 		drawPos.x += viewWidth/2 - 440*guiScale;
 		drawPos.y += viewHeight/2 - 30*guiScale;
-		sprintf(str, "MAP RUNNING SINCE: %s", getArcTimeStr().c_str());
+		sprintf(str, translate( "YUMH41" ), getArcTimeStr().c_str());
 		livingLifePage->hetuwDrawScaledHandwritingFont( str, drawPos, guiScale );
 	}
 }

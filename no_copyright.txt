@@ -1,3 +1,16 @@
+YumWorld:
+YumWorld is an offshoot of YumLife and Skps2010/OneLife.
+YumLife is an offshoot of the Hetuw mod, which has the same protocol as the hetuw mod.
+skps2010 and all of the above are branches of OneHourOneLife.
+OneHourOneLife is the original version of the game.
+
+I put it in the public domain and you can mod YumWorld any way you want.
+However, you need to state within the game you're modifying that it's modified from YumWorld, and that the original version of the game is OneLife, with a clear link pointing to them.
+
+52Hertz
+Zhejiang, China
+September 24, 2023
+----------------------------------------------------------
 This work is not copyrighted.  I place it into the public domain.
 
 Do whatever you want with it, absolutely no restrictions, and no permission 
