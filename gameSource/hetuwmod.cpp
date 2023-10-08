@@ -48,7 +48,7 @@ int HetuwMod::tutMessageOffsetX2;
 HetuwMod::RainbowColor *HetuwMod::colorRainbow;
 
 LivingLifePage *HetuwMod::livingLifePage;
-LiveObject *HetuwMod::ourLiveObject;
+LiveObject *HetuwMod::ourLiveObject = NULL;
 
 bool HetuwMod::bDrawHelp;
 
@@ -251,6 +251,8 @@ bool HetuwMod::addBabyCoordsToList = false;
 
 bool HetuwMod::bRemapStart = true;
 bool HetuwMod::bDrawHungerWarning = false;
+
+int HetuwMod::delayReduction = 0;
 
 std::vector<HetuwMod::HttpRequest*> HetuwMod::httpRequests;
 
@@ -943,6 +945,14 @@ bool HetuwMod::setSetting( const char* name, const char* value ) {
 		bDrawHungerWarning = bool(value[0]-'0');
 		return true;
 	}
+	if (strstr(name, "reduce_delay")) {
+		delayReduction = stoi(value);
+		if (delayReduction < 0)
+			delayReduction = 0;
+		if (delayReduction > 50)
+			delayReduction = 50;
+		return true;
+	}
 
 	return false;
 }
@@ -1048,6 +1058,10 @@ void HetuwMod::writeSettings(ofstream &ofs) {
 	ofs << endl;
 	ofs << "remap_start_enabled = " << (char)(bRemapStart+48) << " // enable mushroom effect" << endl;
 	ofs << "draw_hunger_warning = " << (char)(bDrawHungerWarning+48) << endl;
+	ofs << endl;
+	ofs << "// Reduce action delay by the given percentage, 0-50." << endl;
+	ofs << "// Higher values may cause server disconnects." << endl;
+	ofs << "reduce_delay = " << delayReduction << endl;
 }
 
 void HetuwMod::initSettings() {
@@ -1730,9 +1744,58 @@ void HetuwMod::SayStep() {
 void HetuwMod::Say(const char *text) {
 	if (bTeachLanguage) bTeachLanguage = false;
 
-	char *msg = new char[strlen(text)+1];
-	strcpy(msg, text);
+	char *msg = new char[strlen(text)*2+1];
+	encodeDigits(text, msg);
 	sayBuffer.push_back(msg);
+}
+
+// Encode digits using 0 = ?A, 1 = ?B, 2 = ?C, etc. due to server restrictions
+void HetuwMod::encodeDigits(const char *plain, char *encoded) {
+	bool questionMark = false;
+	int j = 0;
+	size_t len = strlen(plain);
+	for (size_t i=0; i<len; i++) {
+		if ('0' <= plain[i] && plain[i] <= '9') {
+			if (!questionMark) {
+				questionMark = true;
+				encoded[j++] = '?';
+			}
+			encoded[j++] = 'A' + plain[i] - '0';
+		} else {
+			questionMark = false;
+			encoded[j++] = plain[i];
+		}
+	}
+	encoded[j] = '\0';
+}
+
+void HetuwMod::decodeDigits(char *msg) {
+	bool questionMark = false;
+	bool overwritten = false;
+	int j = 0;
+	size_t len = strlen(msg);
+	for (size_t i=0; i<len; i++) {
+		char c = msg[i];
+		if (questionMark) {
+			int n = c - 'A';
+			if (n >= 0 && n < 10) {
+				if (!overwritten) {
+					overwritten = true;
+					j--;
+				}
+				msg[j++] = n + '0';
+				continue;
+			} else {
+				questionMark = false;
+				overwritten = false;
+			}
+		}
+		msg[j++] = c;
+		if (c == '?') {
+			questionMark = true;
+		}
+	}
+	msg[j] = '\0';
 }
 
 void HetuwMod::teachLanguage() {

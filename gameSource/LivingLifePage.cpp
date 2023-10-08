@@ -14848,7 +14848,14 @@ void LivingLifePage::step() {
                     
                     if( d > 32 ) {
                         addAncientHomeLocation( posX, posY );
-						HetuwMod::addHomeLocation( posX, posY, (monumentID == HetuwMod::OBJID_EndTowerSound) ? HetuwMod::hpt_apoc : HetuwMod::hpt_bell );
+                        // YumLife mod
+                        HetuwMod::homePosType hpt = HetuwMod::hpt_bell;
+                        if ( monumentID == HetuwMod::OBJID_EndTower2 ||
+                             monumentID == HetuwMod::OBJID_EndTower3 ||
+                             monumentID == HetuwMod::OBJID_EndTower4 ) {
+                                hpt = HetuwMod::hpt_apoc;
+                            }
+                        HetuwMod::addHomeLocation( posX, posY, hpt );
                         isAncientHomePosHell = false;
                         
                         // play sound in distance
@@ -19890,6 +19897,7 @@ void LivingLifePage::step() {
                                 
                                 existing->currentSpeech = 
                                     stringDuplicate( &( firstSpace[1] ) );
+                                HetuwMod::decodeDigits( existing->currentSpeech );  // YumLife mod
                                 
 
                                 double curTime = game_getCurrentTime();
@@ -22458,6 +22466,16 @@ void LivingLifePage::step() {
             }
         
         
+        double delay = 0.166;
+        // Don't apply delay reduction for baby pickup. These are other
+        // players, not in-game objects, so they are more likely to be annoyed
+        // by being juggled extra fast. It is also possible (but rare) for
+        // excessive baby juggling to cause a client-side desync, and delay
+        // reduction might increase the odds of accidentally triggering this.
+        if (0 != strncmp("BABY ", nextActionMessageToSend, 5)) {
+            delay = delay * (100 - HetuwMod::delayReduction) / 100;
+            }
+
         // wait until 
         // we've stopped moving locally
         // AND animation has played for a bit
@@ -22466,7 +22484,7 @@ void LivingLifePage::step() {
         // AND server agrees with our position
         if( ! ourLiveObject->inMotion && 
             currentTime - ourLiveObject->pendingActionAnimationStartTime > 
-            0.166 - ourLiveObject->lastResponseTimeDelta &&
+            delay - ourLiveObject->lastResponseTimeDelta &&
             ourLiveObject->xd == ourLiveObject->xServer &&
             ourLiveObject->yd == ourLiveObject->yServer ) {
  
