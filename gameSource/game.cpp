@@ -1,4 +1,4 @@
-int versionNumber = 394;
+int versionNumber = 397;
 int dataVersionNumber = 0;
 
 int binVersionNumber = versionNumber;
@@ -285,10 +285,6 @@ const char *getAppName() {
     return "OneLife";
     }
 
-int getAppVersion() {
-    return versionNumber;
-    }
-
 const char *getLinuxAppName() {
     // no dir-name conflict here because we're using all caps for app name
     return "OneLifeApp";
@@ -369,6 +365,12 @@ static void updateDataVersionNumber() {
                 }
             }
         }
+    }
+
+int getAppVersion() {
+    if(dataVersionNumber == 0)
+        updateDataVersionNumber();
+    return versionNumber;
     }
 
 

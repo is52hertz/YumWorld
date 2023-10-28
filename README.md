@@ -3,7 +3,7 @@
 + [English](https://github.com/skps2010/OneLife/#English)
 + [正體中文](https://github.com/skps2010/OneLife/#正體中文)
 + [简体中文](https://github.com/skps2010/OneLife/#简体中文)
-+ [Українська мова]() *未完工*
++ [Українська мова](https://github.com/skps2010/OneLife/#ukr)
 
 ![Imgur](https://i.imgur.com/LHcp2Qy.png)
 ![Imgur](https://i.imgur.com/9AjlblQ.png)
@@ -18,17 +18,18 @@ It currently support Traditional Chinese, Simplified Chinese and Ukrainian. 
 
 ### Windows
 You need to download it everytime when the game updates.
-1. Go to [release page](https://github.com/skps2010/OneLife/releases) and download `OneLife_Windows_v???.zip` (??? is verison number).
+1. Go to [release page](https://github.com/skps2010/OneLife/releases) and download `OneLife_Windows_v???.zip` (??? is version number).
 2. Unzip it and go into the folder.
 3. Run `translator.exe`. It will ask you to input a number, then it will translate the whole game into corresponding languages.
 4. Run `OneLife.exe` to play.
 
 ### Mac
 You need to download it everytime when the game updates.
-1. Go to [release page](https://github.com/skps2010/OneLife/releases) and download `OneLife_MacOSX_v???.zip` (??? is verison number).
+1. Go to [release page](https://github.com/skps2010/OneLife/releases) and download `OneLife_MacOSX_v???.zip` (??? is version number).
 2. Unzip it and go into the folder.
 3. Run `translator`. It will ask you to input a number, then it will translate the whole game into corresponding languages.
-4. Run `OneLife_v???.app` to play (??? is verison number).
+4. Run `OneLife_v???.app` to play (??? is version number).
+5. If the game still says "PLEASE DOWNLOAD THE LATEST VERSION", remove `~/Library/Preferences/OneLife_prefs.txt` and start again, it should tell you to select the game folder.
 
 ### Mac, Linux (Source Code)
 This will download the newest version:
@@ -86,6 +87,7 @@ You can also join [Kook](https://kook.top/E9cHJL).
 2. 解壓縮並進入資料夾。
 3. 執行 `translator`。他會要求你輸入一個數字，然後將整個遊戲翻成對應的語言。
 4. 執行 `OneLife_v???.app` 來玩 (??? 是版本號)。
+5. 如果遊戲還是說「請下載最新版本」，移除 `~/Library/Preferences/OneLife_prefs.txt` 並重新啟動，遊戲會叫你選擇遊戲資料夾。
 
 ### Mac, Linux（原始碼）
 這會下載最新版本：
@@ -139,17 +141,18 @@ You can also join [Kook](https://kook.top/E9cHJL).
 
 ### Windows
 每次游戏更新时，都要重新下载。
-1. 去 [发布页面](https://github.com/skps2010/OneLife/releases) 并下载 “OneLife_Windows_v???.zip' （??? 是版本号）。
+1. 去 [发布页面](https://github.com/skps2010/OneLife/releases) 并下载 `OneLife_Windows_v???.zip` （??? 是版本号）。
 2. 解压缩并进入文件夹。
 3. 执行 `translator.exe`。 他会要求你输入一个数字，然后将整个游戏翻成对应的语言。
 4. 执行 `OneLife.exe` 来玩。
 
 ### Mac
 每次游戏更新时，都要重新下载。
-1. 去 [发布页面](https://github.com/skps2010/OneLife/releases) 并下载 “OneLife_MacOSX_v???.zip' （??? 是版本号）。
+1. 去 [发布页面](https://github.com/skps2010/OneLife/releases) 并下载 `OneLife_MacOSX_v???.zip` （??? 是版本号）。
 2. 解压缩并进入文件夹。
 3. 执行 `translator`。 他会要求你输入一个数字，然后将整个游戏翻成对应的语言。
 4. 执行 `OneLife_v???.app` 来玩（??? 是版本号）。
+5. 如果游戏还是说「请下载最新版本」，移除 `~/Library/Preferences/OneLife_prefs.txt` 并重新启动，游戏会叫你选择游戏资料夹。
 
 ### Mac, Linux（源代码）
 这会下载最新版本：
@@ -184,4 +187,52 @@ You can also join [Kook](https://kook.top/E9cHJL).
 
 <u>*翻译不一定 100% 正确*</u>
 
-[^PT]:partial turnover - 部分機翻 - 部分机翻
+***
+### ukr
+# OneLife
+Метою цього мода є переклад гри One Hour One Life на різні мови.  
+Він підтримує Unicode та має інструмент перекладу.  
+Наразі він підтримує традиційну китайську, спрощену китайську та українську мови.  
+
+## Як користуватися
+
+### Windows
+Вам потрібно завантажувати його щоразу, коли гра оновлюється.
+1. Перейдіть на [сторінку релізу](https://github.com/skps2010/OneLife/releases) і завантажте `OneLife_Windows_v???.zip` (??? - номер версії).
+2. Розпакуйте його та перейдіть до папки.
+3. Запустіть `translator.exe`. Він попросить вас ввести число, після чого перекладе всю гру на відповідні мови.
+4. Запустіть `OneLife.exe`, щоб почати грати.
+
+### Mac
+Вам потрібно завантажувати його щоразу, коли гра оновлюється.
+1. Перейдіть на [сторінку релізу](https://github.com/skps2010/OneLife/releases) і завантажте `OneLife_MacOSX_v???.zip` (??? - номер версії).
+2. Розпакуйте його та перейдіть до папки.
+3. Запустіть `translator`. Він попросить вас ввести число, після чого перекладе всю гру на відповідні мови.
+4. Запустіть `OneLife_v???.app` для гри (??? - номер версії).
+5. Якщо гра все ще каже "PLEASE DOWNLOAD THE LATEST VERSION", видаліть `~/Library/Preferences/OneLife_prefs.txt` і запустіть знову, вона повинна сказати вам вибрати папку гри.
+
+### Mac, Linux (Вихідний код)
+Це призведе до завантаження найновішої версії:
+1. Завантажте [skps2010Build.sh](https://github.com/skps2010/OneLife/blob/master/scripts/skps2010Scripts/skps2010Build.sh) і помістіть його до порожньої теки, а потім запустіть. Це призведе до компіляції гри.
+2. Запустіть `python3 translator.py`. Він попросить вас ввести число, після чого перекладе всю гру на відповідні мови.
+3. Запустіть `OneLifeApp`, щоб почати грати.
+
+## Як увійти за допомогою Steam 
+Звичайний спосіб
+1. Перейдіть на [цю сторінку](http://onehouronelife.com/steamGate/server.php?action=show_download_link).
+2. На цій сторінці вам буде запропоновано увійти через Steam, після чого ви побачите свій обліковий запис і пароль.
+3. Скопіюйте свій обліковий запис і пароль для входу.
+
+Альтернативний спосіб  
+1. Клацніть правою кнопкою миші по грі One Hour One Life у бібліотеці Steam, виберіть "Керування", а потім "Переглянути локальні файли".
+2. З'явиться тека з грою, обліковий запис для входу - у файлі `settings/email.ini`, а пароль для входу - у файлі `settings/accountKey.ini`.
+3. Скопіюйте обліковий запис і пароль для входу.
+
+## Переклад 
+### Конспект 
+Всі переклади беруться з цього [Google sheet](https://docs.google.com/spreadsheets/d/1AH6eZJJ5zkB1zT-iwlomVAUxsa4f7gIgYFS0X265GyM/edit#gid=682688818).  
+Ми намагатимемося оновлювати його щотижня.  
+Ви можете приєднатися до [Discord](https://discord.gg/UFZg3WXGrU), щоб обговорити або повідомити про помилки.  
+Ви також можете приєднатися до [Kook](https://kook.top/E9cHJL).
+
+[^PT]:partial turnover - 部分機翻 - 部分机翻 - частковий оборот

@@ -36,9 +36,23 @@ latestTaggedVersionB=`git for-each-ref --sort=-creatordate --format '%(refname:s
 git checkout -q OneLife_v$latestTaggedVersionB
 
 rm */cache.fcz
-
+cd ..
 
 latestVersion=$latestTaggedVersionB
+
+cp OneLife/build/source/runToBuild .
+cp OneLife/scripts/skps2010Scripts/cleanOldBuilds.sh .
+cp OneLife/scripts/skps2010Scripts/makeWindows.sh .
+cp OneLife/scripts/skps2010Scripts/makeMacOSX.sh .
+cp OneLife/scripts/skps2010Scripts/translator.py .
+cp OneLife/scripts/skps2010Scripts/translator .
+
+if [ "$1" = "pull_only" ]; then
+	echo "Done pulling v$latestVersion"
+	exit
+fi
+
+
 
 # if [ "$latestTaggedVersionA" -gt "$latestTaggedVersionB" ]
 # then
@@ -47,7 +61,6 @@ latestVersion=$latestTaggedVersionB
 
 
 
-cd ..
 
 
 if [ ! -h animations ]
@@ -102,15 +115,6 @@ if [ ! -h dataVersionNumber.txt ]
 then
 	ln -s OneLifeData7/dataVersionNumber.txt .	
 fi
-
-
-
-
-cp OneLife/build/source/runToBuild .
-cp OneLife/scripts/skps2010Scripts/cleanOldBuilds.sh .
-cp OneLife/scripts/skps2010Scripts/makeWindows.sh .
-cp OneLife/scripts/skps2010Scripts/makeMacOSX.sh .
-cp OneLife/scripts/skps2010Scripts/translator.py .
 
 
 if [ "$(uname)" = "Darwin" ]; then
