@@ -288,9 +288,6 @@ public:
 	static const int defaultViewWidth = 1280;
 	static const int defaultViewHeight = 720;
 
-	static constexpr float zoomValueKey = 0.25f;
-	static constexpr float zoomValueScroll = 0.15f;
-
 	static constexpr int spriteBodyWhiteID = 53;
 
 	static int maxObjects;
@@ -434,9 +431,10 @@ public:
 	static string getTimeStamp();
 	static string getTimeStamp(time_t t);
 
-	static void zoomIncrease(float value);
-	static void zoomDecrease(float value);
-	static void setZoom(float newZoom);
+	static void zoomIncrease();
+	static void zoomDecrease();
+	static void disableZoom();
+	static void enableZoom();
 	static void guiScaleIncrease();
 	static void guiScaleDecrease();
 	
@@ -585,6 +583,7 @@ public:
 	static bool bRemapStart;
 	static bool bDrawHungerWarning;
 	static int delayReduction;
+	static int zoomLimit;
 
 	static bool bFoundFamilyName;
 	static std::vector<FamilyInRange*> familiesInRange;
